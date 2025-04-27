@@ -20,7 +20,7 @@ export default function Home() {
 
   return (
     <main className="p-6">
-      <h1 className="text-2xl font-bold">Welcome to the Dashboard</h1>
+      <h1 className="text-2xl font-bold">Welcome to WO Reg SuperApp</h1>
       {/* your page content */}
     </main>
   );
