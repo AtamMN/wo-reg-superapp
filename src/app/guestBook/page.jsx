@@ -39,31 +39,35 @@ export default function GuestBook() {
   };
 
   return (
-    <div className="p-6 pb-20 max-w-xl mx-auto space-y-4 mt-32">
-      <h1 className="text-2xl font-bold">Guest Book</h1>
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-xl">
+        <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8 space-y-6">
+          <h1 className="text-2xl font-bold text-center">Guest Book</h1>
 
-      <GuestForm
-        validator={currentUser}
-        onSubmit={handleSubmit}
-        submitting={submitting}
-      />
+          <GuestForm
+            validator={currentUser}
+            onSubmit={handleSubmit}
+            submitting={submitting}
+          />
 
-      {message.text && (
-        <p
-          className={`text-sm ${
-            message.type === "success" ? "text-green-600" : "text-red-600"
-          }`}
-        >
-          {message.text}
-        </p>
-      )}
+          {message.text && (
+            <p
+              className={`text-center text-sm ${
+                message.type === "success" ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {message.text}
+            </p>
+          )}
+        </div>
 
-      <div className="fixed bottom-4 right-4 z-50">
-        <UserDropdown
-          currentUser={currentUser}
-          userInfo={userInfo}
-          loadingUser={loadingUser}
-        />
+        <div className="fixed bottom-4 right-4 z-50">
+          <UserDropdown
+            currentUser={currentUser}
+            userInfo={userInfo}
+            loadingUser={loadingUser}
+          />
+        </div>
       </div>
     </div>
   );

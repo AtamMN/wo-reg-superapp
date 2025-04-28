@@ -1,16 +1,42 @@
 // components/GuestBook/GuestForm.jsx
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
-export default function GuestForm({ onSubmit, submitting, validator}) {
+export default function GuestForm({ onSubmit, submitting, validator }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [signature, setSignature] = useState(null);
   const sigCanvas = useRef();
+  const containerRef = useRef(null);
+  const [canvasWidth, setCanvasWidth] = useState(500);
+
+  // Update canvas width on resize
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setCanvasWidth(containerRef.current.offsetWidth);
+      }
+    };
+
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
+  // Clear form when submission completes
+  useEffect(() => {
+    if (!submitting) {
+      setName('');
+      setPhone('');
+      setAddress('');
+      sigCanvas.current?.clear();
+      setSignature(null);
+    }
+  }, [submitting]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -25,7 +51,7 @@ export default function GuestForm({ onSubmit, submitting, validator}) {
       phone, 
       address,
       signature,
-      validator: validator?.email || '-' // Add validator field
+      validator: validator?.email || '-'
     });
   };
 
@@ -59,26 +85,28 @@ export default function GuestForm({ onSubmit, submitting, validator}) {
         required
       />
 
-      <div>
+      <div ref={containerRef}>
         <p className="mb-1 font-medium">Signature</p>
         <SignatureCanvas
           penColor="black"
           canvasProps={{
-            width: 500,
+            width: canvasWidth,
             height: 200,
-            className: "border rounded bg-white",
+            className: "border rounded bg-white w-full",
           }}
           ref={sigCanvas}
           onEnd={handleSignatureEnd}
         />
-        <Button
-          variant="outline"
-          className="mt-2"
-          onClick={clearSignature}
-          type="button"
-        >
-          Clear Signature
-        </Button>
+        {signature && (
+          <Button
+            variant="outline"
+            className="mt-2"
+            onClick={clearSignature}
+            type="button"
+          >
+            Clear Signature
+          </Button>
+        )}
       </div>
 
       <Button type="submit" disabled={submitting}>

@@ -318,7 +318,7 @@ function DraggableRow({
   );
 }
 
-export function DataTable({
+export function   DataTable({
   data: initialData
 }) {
   const [data, setData] = React.useState(() => initialData)
