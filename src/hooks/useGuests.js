@@ -5,6 +5,7 @@ export default function useGuests() {
   const [guests, setGuests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [columns, setColumns] = useState([]);
 
   useEffect(() => {
     const fetchGuests = async () => {
@@ -29,10 +30,18 @@ export default function useGuests() {
         const guestsArray = Object.entries(data || {}).map(([id, guest]) => ({
           id,
           ...guest,
-          timestamp: new Date(guest.timestamp).toLocaleString() // Format timestamp
+          timestamp: new Date(guest.timestamp).toLocaleString()
         }));
 
+        // Get column names from first item (if exists)
+        const columnNames = 
+        // guestsArray.length > 0 
+        //   ? Object.keys(guestsArray[0])
+        //   : 
+          ['id', 'name', 'phone', 'address', 'signature', 'timestamp', 'validator']; // Default columns
+
         setGuests(guestsArray);
+        setColumns(columnNames);
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -43,5 +52,11 @@ export default function useGuests() {
     fetchGuests();
   }, []);
 
-  return { guests, loading, error };
+  return { 
+    guests, 
+    loading, 
+    error, 
+    columns, 
+    columnCount: columns.length 
+  };
 }

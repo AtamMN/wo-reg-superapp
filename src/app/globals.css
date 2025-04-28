@@ -43,6 +43,15 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.animate-fade-out {
+  animation: fade-out 3.0s ease-out forwards;
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);

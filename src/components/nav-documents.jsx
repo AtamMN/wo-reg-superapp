@@ -1,6 +1,6 @@
 "use client"
 
-import { IconDots, IconFolder, IconShare3, IconTrash } from "@tabler/icons-react";
+import { IconDots, IconFolder, IconShare3, IconTrash, IconBook, IconScan } from "@tabler/icons-react";
 
 import {
   DropdownMenu,
@@ -23,12 +23,24 @@ export function NavDocuments({
   items
 }) {
   const { isMobile } = useSidebar()
-
+  const coreFeature = [
+    {
+      name: 'Guest Book',
+      url: '/guestBook',
+      icon: IconBook
+    },
+    {
+      name: 'QR Scanner',
+      url: '/scanQR',
+      icon: IconScan
+    },
+    
+  ]
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Documents</SidebarGroupLabel>
+      <SidebarGroupLabel>Core Feature</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => (
+        {coreFeature.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
               <a href={item.url}>
@@ -64,12 +76,12 @@ export function NavDocuments({
             </DropdownMenu>
           </SidebarMenuItem>
         ))}
-        <SidebarMenuItem>
+        {/* <SidebarMenuItem>
           <SidebarMenuButton className="text-sidebar-foreground/70">
             <IconDots className="text-sidebar-foreground/70" />
             <span>More</span>
           </SidebarMenuButton>
-        </SidebarMenuItem>
+        </SidebarMenuItem> */}
       </SidebarMenu>
     </SidebarGroup>
   );
