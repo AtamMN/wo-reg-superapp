@@ -1,7 +1,10 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import {
+  getAuth,
+  setPersistence,
+  browserSessionPersistence
+} from "firebase/auth";
 import { getDatabase } from "firebase/database";
-// import { getAnalytics } from "firebase/analytics"
 
 const firebaseConfig = {
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -16,8 +19,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// const analytics = getAnalytics(app).isSupported();
+// Initialize services
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-export {auth, db}
+// Set session-based persistence (auto logout on browser close)
+setPersistence(auth, browserSessionPersistence)
+  .then(() => {
+    console.log("Auth persistence set to session.");
+  })
+  .catch((error) => {
+    console.error("Failed to set session persistence:", error);
+  });
+
+export { auth, db };

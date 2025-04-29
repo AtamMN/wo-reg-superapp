@@ -70,7 +70,7 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-4">
             {currentUser ? (
-              <UserDropdown currentUser={currentUser} userInfo={userInfo}/>
+              <UserDropdown currentUser={currentUser} userInfo={userInfo} />
             ) : (
               <>
                 <Link
@@ -103,15 +103,24 @@ export default function LandingPage() {
                     scheduling with our comprehensive platform.
                   </p>
                 </div>
-                <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                  <button className="inline-flex items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </button>
-                  <button className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
-                    Schedule Demo
-                  </button>
-                </div>
+                {!currentUser ? (
+                  <div className="flex flex-col gap-2 min-[400px]:flex-row">
+                    <button className="inline-flex items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
+                      Start Free Trial
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </button>
+                    <button className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
+                      Schedule Demo
+                    </button>
+                  </div>
+                ) : (
+                  <a href="/dashboard">
+                    <button className="inline-flex items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
+                      Dashboard
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </button>
+                  </a>
+                )}
               </div>
               <Image
                 src="/dashboard.png"

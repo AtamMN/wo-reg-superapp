@@ -1,5 +1,7 @@
+const { default: AccountsTable } = require("@/components/SAdminDashboard/AccountsTable")
+
 const Accounts = ({}) => {
-  return <div>accounts</div>
+  return <AccountsTable/>
 }
 
 export default Accounts

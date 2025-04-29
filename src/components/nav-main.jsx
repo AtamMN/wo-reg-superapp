@@ -49,7 +49,7 @@ export function NavMain({ items }) {
     },
     {
       name: "Page Permissions",
-      pathname: "/dashboard/pagepermission",
+      pathname: "/dashboard/permissions",
       icon: IconLockAccess,
     },
   ];

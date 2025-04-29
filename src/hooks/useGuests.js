@@ -1,5 +1,7 @@
 // hooks/useGuests.js
 import { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase/firebase';
+import { ref, onValue } from 'firebase/database';
 
 export default function useGuests() {
   const [guests, setGuests] = useState([]);
@@ -8,25 +10,11 @@ export default function useGuests() {
   const [columns, setColumns] = useState([]);
 
   useEffect(() => {
-    const fetchGuests = async () => {
+    const guestsRef = ref(db, 'guests');
+    
+    const unsubscribe = onValue(guestsRef, (snapshot) => {
       try {
-        const response = await fetch(
-          'https://wo-reg-superapp-default-rtdb.asia-southeast1.firebasedatabase.app/guests.json',
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch guests');
-        }
-
-        const data = await response.json();
-        
-        // Transform the Firebase object to array
+        const data = snapshot.val();
         const guestsArray = Object.entries(data || {}).map(([id, guest]) => ({
           id,
           ...guest,
@@ -34,11 +22,9 @@ export default function useGuests() {
         }));
 
         // Get column names from first item (if exists)
-        const columnNames = 
-        // guestsArray.length > 0 
-        //   ? Object.keys(guestsArray[0])
-        //   : 
-          ['id', 'name', 'phone', 'address', 'signature', 'timestamp', 'validator']; // Default columns
+        const columnNames = guestsArray.length > 0 
+          ? Object.keys(guestsArray[0])
+          : ['id', 'name', 'phone', 'address', 'signature', 'timestamp', 'validator'];
 
         setGuests(guestsArray);
         setColumns(columnNames);
@@ -47,9 +33,13 @@ export default function useGuests() {
         setError(err.message);
         setLoading(false);
       }
-    };
+    }, (error) => {
+      setError(error.message);
+      setLoading(false);
+    });
 
-    fetchGuests();
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   return { 

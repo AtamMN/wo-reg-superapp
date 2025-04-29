@@ -1,6 +1,5 @@
-// hooks/useUserInfo.js
 import { useEffect, useState } from 'react';
-import { ref, get } from 'firebase/database';
+import { ref, onValue, set, get } from 'firebase/database';
 import { db } from '@/lib/firebase/firebase';
 
 export default function useUserInfo(currentUser) {
@@ -9,61 +8,58 @@ export default function useUserInfo(currentUser) {
     role: "Loading...",
     email: "Loading...",
   });
+  const [allAccounts, setAllAccounts] = useState([]);
   const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
-    const fetchUserDetails = async () => {
-      setLoadingUser(true);
-      
-      if (!currentUser?.email) {
-        setLoadingUser(false);
-        return;
+    const usersRef = ref(db, 'accounts/users');
+    const unsubscribe = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const users = Object.entries(data).map(([id, user]) => ({
+        ...user,
+        role: user.role || 'user',
+        id
+      }));
+      setAllAccounts(users);
+
+      if (currentUser?.email) {
+        const found = users.find(u => u.email.toLowerCase() === currentUser.email.toLowerCase());
+        setUserInfo({
+          name: found?.name || "Guest",
+          role: (found?.role || "user").toUpperCase(),
+          email: found?.email || currentUser.email
+        });
       }
 
-      try {
-        const roles = ["sadmins", "admins", "users"];
-        let userData = null;
+      setLoadingUser(false);
+    }, (err) => {
+      console.error("Error fetching users:", err);
+      setLoadingUser(false);
+    });
 
-        for (const role of roles) {
-          const roleRef = ref(db, `accounts/${role}`);
-          const snapshot = await get(roleRef);
-          
-          if (snapshot.exists()) {
-            const users = snapshot.val();
-            const userEntry = Object.entries(users).find(
-              ([_, user]) => user.email === currentUser.email
-            );
-
-            if (userEntry) {
-              userData = {
-                role: role.slice(0, -1),
-                roleId: userEntry[0],
-                ...userEntry[1]
-              };
-              break;
-            }
-          }
-        }
-
-        setUserInfo({
-          name: userData?.name || "Guest",
-          role: userData?.role?.toUpperCase() || "Unknown",
-          email: userData?.email || currentUser.email,
-        });
-      } catch (error) {
-        console.error("Error fetching user details:", error);
-        setUserInfo({
-          name: "Error Loading",
-          role: "Error",
-          email: currentUser.email
-        });
-      } finally {
-        setLoadingUser(false);
-      }
-    };
-
-    currentUser ? fetchUserDetails() : setLoadingUser(false);
+    return () => unsubscribe();
   }, [currentUser]);
 
-  return { userInfo, loadingUser };
+  const updateRole = async (accountId, newRole) => {
+    const userRef = ref(db, `/accounts/users/${accountId}`);
+
+    // Fetch the current user data
+    const snapshot = await get(userRef);
+    const currentUserData = snapshot.val();
+
+    if (currentUserData) {
+      // Update the role and set it back to Firebase
+      const updatedUserData = {
+        ...currentUserData,
+        role: newRole
+      };
+
+      // Set the updated user data back to Firebase
+      await set(userRef, updatedUserData);
+    } else {
+      console.error('User not found');
+    }
+  };
+
+  return { allAccounts, userInfo, loadingUser, updateRole };
 }
