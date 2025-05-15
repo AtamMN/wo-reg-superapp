@@ -17,7 +17,7 @@ export function SiteHeader() {
           loading ?
           <h1 className="text-base font-medium">Loading...</h1> 
           :
-          <h1 className="text-base font-medium">{userInfo.role} Dashboard</h1>
+          <h1 className="text-base font-medium">{userInfo.role.toUpperCase()} Dashboard</h1>
         }
         <div className="ml-auto flex items-center gap-2">
           <Button variant="ghost" asChild size="sm" className="hidden sm:flex">

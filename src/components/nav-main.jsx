@@ -52,6 +52,11 @@ export function NavMain({ items }) {
       pathname: "/dashboard/permissions",
       icon: IconLockAccess,
     },
+    {
+      name: 'Share Invitation',
+      pathname:'/dashboard/invitation',
+      icon: IconMail
+    }
   ];
 
   return (

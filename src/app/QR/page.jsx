@@ -1,5 +1,5 @@
 const QR = ({}) => {
-  return <div></div>
+  return <div>show QR</div>
 }
 
 export default QR

@@ -5,7 +5,6 @@ import useUserInfo from "@/hooks/useUserInfo";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -14,7 +13,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -33,19 +31,22 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import RegisterAccountDialog from "./RegisterAccountDialog"; // pastikan path sesuai
 
 const roles = ["admin", "user"];
 
 export default function AccountsTable() {
-  const { currentUser } = useAuth()
-  const { allAccounts, userInfo, loadingUser, updateRole } = useUserInfo(currentUser);
+  const { currentUser } = useAuth();
+  const { allAccounts, userInfo, updateRole } = useUserInfo(currentUser);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingRoleChange, setPendingRoleChange] = useState(null);
+
+  // Dialog register
+  const [registerDialogOpen, setRegisterDialogOpen] = useState(false);
 
   const columns = ["name", "email", "role"];
   const filteredAccounts = allAccounts;
@@ -79,7 +80,14 @@ export default function AccountsTable() {
     <div className="p-6">
       <Card className="@container/card">
         <CardHeader className="flex flex-row justify-between items-center">
-          <CardTitle>Accounts List</CardTitle>
+          <CardTitle>
+            <div className="flex items-center gap-4">
+              Accounts List
+              {userInfo?.role === "sadmin" && (
+                <Button variant="outline" onClick={() => setRegisterDialogOpen(true)}>+</Button>
+              )}
+            </div>
+          </CardTitle>
           <div className="flex items-center gap-4">
             <span className="text-sm">Items per page:</span>
             <Select
@@ -186,7 +194,7 @@ export default function AccountsTable() {
         </CardFooter>
       </Card>
 
-      {/* Confirmation Dialog */}
+      {/* Confirmation Dialog for role change */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -204,6 +212,13 @@ export default function AccountsTable() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Register Account Dialog */}
+      <RegisterAccountDialog
+        isOpen={registerDialogOpen}
+        onClose={() => setRegisterDialogOpen(false)}
+        userRole={userInfo?.role}
+      />
     </div>
   );
 }

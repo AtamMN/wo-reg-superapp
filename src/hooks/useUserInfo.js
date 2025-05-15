@@ -26,7 +26,7 @@ export default function useUserInfo(currentUser) {
         const found = users.find(u => u.email.toLowerCase() === currentUser.email.toLowerCase());
         setUserInfo({
           name: found?.name || "Guest",
-          role: (found?.role || "user").toUpperCase(),
+          role: (found?.role || "user").toLowerCase(),
           email: found?.email || currentUser.email
         });
       }

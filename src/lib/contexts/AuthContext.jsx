@@ -1,9 +1,9 @@
-'use client';
-import { createContext, useContext, useEffect, useState } from 'react';
-import { auth } from '../firebase/firebase';
-import { onAuthStateChanged } from 'firebase/auth'; 
-import { ref, get } from 'firebase/database';
-import { db } from '../firebase/firebase';
+"use client";
+import { createContext, useContext, useEffect, useState } from "react";
+import { auth } from "../firebase/firebase";
+import { onAuthStateChanged, signOut, deleteUser } from "firebase/auth";
+import { ref, get } from "firebase/database";
+import { db } from "../firebase/firebase";
 
 const AuthContext = createContext();
 
@@ -14,29 +14,29 @@ export function AuthProvider({ children }) {
 
   const checkUserRole = async (email) => {
     try {
-      const roles = ['sadmins', 'admins', 'users'];
-      
+      const roles = ["sadmins", "admins", "users"];
+
       for (const role of roles) {
         const roleRef = ref(db, `accounts/${role}`);
         const snapshot = await get(roleRef);
-        
+
         if (snapshot.exists()) {
           const roleData = snapshot.val();
           const userEntry = Object.values(roleData).find(
-            user => user.email === email
+            (user) => user.email === email
           );
-          
+
           if (userEntry) {
-            return { 
+            return {
               role: role.slice(0, -1), // Remove 's' (sadmin, admin, user)
-              roleData: userEntry
+              roleData: userEntry,
             };
           }
         }
       }
       return null;
     } catch (error) {
-      console.error('Role check error:', error);
+      console.error("Role check error:", error);
       return null;
     }
   };
@@ -45,23 +45,44 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const roleInfo = await checkUserRole(user.email);
-        setUserRole(roleInfo);
+
+        if (!roleInfo) {
+          // ❌ User not registered in DB → sign out and delete
+          try {
+            await deleteUser(user); // Optional: delete from Firebase Auth
+          } catch (error) {
+            console.warn("Failed to delete user:", error.message);
+          }
+
+          await signOut(auth);
+          alert("Akun kamu tidak terdaftar. Silakan hubungi admin.");
+          setCurrentUser(null);
+          setUserRole(null);
+          setLoading(false);
+          return;
+        }
+
+        // ✅ User found
         setCurrentUser(user);
+        setUserRole(roleInfo);
       } else {
         setCurrentUser(null);
         setUserRole(null);
       }
       setLoading(false);
     });
+
     return unsubscribe;
   }, []);
 
   return (
-    <AuthContext.Provider value={{ 
-      currentUser, 
-      userRole,
-      loading 
-    }}>
+    <AuthContext.Provider
+      value={{
+        currentUser,
+        userRole,
+        loading,
+      }}
+    >
       {!loading && children}
     </AuthContext.Provider>
   );
