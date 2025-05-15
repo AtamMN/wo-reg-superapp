@@ -1,6 +1,6 @@
 "use client"
 
-import { IconDots, IconFolder, IconShare3, IconTrash, IconBook, IconScan } from "@tabler/icons-react";
+import { IconDots, IconFolder, IconShare3, IconTrash, IconBook, IconScan, IconShare2, IconShare, IconMail } from "@tabler/icons-react";
 
 import {
   DropdownMenu,
@@ -34,7 +34,11 @@ export function NavDocuments({
       url: '/scanQR',
       icon: IconScan
     },
-    
+    {
+      name: 'User Invitation',
+      url:'/invitation',
+      icon: IconMail
+    }
   ]
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">

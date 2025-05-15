@@ -18,10 +18,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import useUserInfo from "@/hooks/useUserInfo";
 import UserDropdown from "../GuestBook/UserDropdown";
+import { auth } from "@/lib/firebase/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LandingPage() {
   const { currentUser } = useAuth();
   const { userInfo, loadingUser } = useUserInfo(currentUser);
+  const router = useRouter();
 
   // useEffect(() => {
   //   if (!loading && !user) {
@@ -32,6 +35,15 @@ export default function LandingPage() {
   // if (loading || !user) {
   //   return <div className="flex justify-center items-center h-screen">Loading...</div>;
   // }
+  const handleTrialLogin = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, "trial@trial.com", "trial123");
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Trial login failed:", error);
+      toast.error("Failed to login with trial account"); // fallback: alert("...")
+    }
+  };
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
@@ -98,14 +110,17 @@ export default function LandingPage() {
                   <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none text-slate-900">
                     Organize your events in one place
                   </h1>
-                  <p className="max-w-[600px] text-slate-500 md:text-xl">
+                  <p className="max-w-[600px] text-slate-500 md:text-xl pt-3">
                     Simplify event registration, attendee management, and
                     scheduling with our comprehensive platform.
                   </p>
                 </div>
                 {!currentUser ? (
                   <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                    <button className="inline-flex items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
+                    <button
+                      onClick={handleTrialLogin}
+                      className="inline-flex items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                    >
                       Start Free Trial
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </button>
