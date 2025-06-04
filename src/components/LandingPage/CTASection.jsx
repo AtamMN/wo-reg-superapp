@@ -16,6 +16,7 @@ import { toast } from 'sonner'; // using Sonner toaster for notifications
 import { personalDb } from '@/lib/firebase/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 
+//post to personal db
 const CTASection = () => {
   const [email, setEmail] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
