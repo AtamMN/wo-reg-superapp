@@ -82,7 +82,7 @@ export default function GuestsTable() {
   const handleView = (guestId) => {
     const guest = guests.find((g) => g.id === guestId);
     setSelectedGuest(guest);
-    setIsViewOpen(true);
+    setIsViewOpen(true); // Open the View dialog
   };
 
   const sortedGuests = [...guests].sort((a, b) => {
@@ -309,6 +309,7 @@ export default function GuestsTable() {
           </div>
         </CardFooter>
       </Card>
+      {/* Dialogs */}
       {selectedGuest && (
         <>
           <ViewGuestDialog
