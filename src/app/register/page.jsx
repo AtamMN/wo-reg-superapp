@@ -20,37 +20,21 @@ export default function RegisterPage() {
   const handleRegister = async (e) => {
     e.preventDefault();
 
-    const role = "users";
-    const roleRef = ref(db, `accounts/${role}`);
-
     try {
       // Step 1: Create the user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const uid = userCredential.user.uid;
 
-      // Step 2: Get current users under 'users' role
-      const snapshot = await get(roleRef);
-      const existing = snapshot.exists() ? snapshot.val() : {};
-
-      // Step 3: Calculate the next available roleId (user1, user2, ...)
-      const takenIds = Object.keys(existing)
-        .filter((key) => /^user\d+$/.test(key))
-        .map((key) => parseInt(key.replace("user", "")))
-        .sort((a, b) => a - b);
-
-      let newIdNum = 1;
-      for (let i = 0; i < takenIds.length; i++) {
-        if (takenIds[i] !== newIdNum) break;
-        newIdNum++;
-      }
-
-      const roleId = `user${newIdNum}`;
-
-      // Step 4: Save user role data
-      await set(ref(db, `accounts/${role}/${roleId}`), {
+      // Step 2: Save user data with UID as the key
+      await set(ref(db, `accounts/users/${uid}`), {
         name,
         email,
         uid,
+        role: "user", // atur default role di sini
       });
 
       router.push("/");

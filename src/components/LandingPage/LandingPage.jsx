@@ -18,10 +18,14 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import useUserInfo from "@/hooks/useUserInfo";
 import UserDropdown from "../GuestBook/UserDropdown";
+import { auth } from "@/lib/firebase/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import CTASection from "./CTASection";
 
 export default function LandingPage() {
   const { currentUser } = useAuth();
   const { userInfo, loadingUser } = useUserInfo(currentUser);
+  const router = useRouter();
 
   // useEffect(() => {
   //   if (!loading && !user) {
@@ -32,6 +36,15 @@ export default function LandingPage() {
   // if (loading || !user) {
   //   return <div className="flex justify-center items-center h-screen">Loading...</div>;
   // }
+  const handleTrialLogin = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, "trial@trial.com", "trial123");
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Trial login failed:", error);
+      toast.error("Failed to login with trial account"); // fallback: alert("...")
+    }
+  };
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
@@ -39,8 +52,10 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="container mx-auto px-4 flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <Calendar className="h-6 w-6 text-slate-600" />
-            <span className="text-xl font-bold text-slate-900">WO-Reg</span>
+            <Link href="#hero" className="flex items-center gap-2">
+              <Calendar className="h-6 w-6 text-slate-600" />
+              <span className="text-xl font-bold text-slate-900">WO-Reg</span>
+            </Link>
           </div>
           <nav className="hidden md:flex gap-6">
             <Link
@@ -70,7 +85,7 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-4">
             {currentUser ? (
-              <UserDropdown currentUser={currentUser} userInfo={userInfo}/>
+              <UserDropdown currentUser={currentUser} userInfo={userInfo} />
             ) : (
               <>
                 <Link
@@ -80,7 +95,7 @@ export default function LandingPage() {
                   Log in
                 </Link>
                 <button className="inline-flex items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
-                  Get Started
+                  <Link href="#contact">Get Started</Link>
                 </button>
               </>
             )}
@@ -93,25 +108,39 @@ export default function LandingPage() {
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container mx-auto px-4 md:px-6">
             <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px]">
-              <div className="flex flex-col justify-center space-y-4">
+              <div id="" className="flex flex-col justify-center space-y-4">
                 <div className="space-y-2">
                   <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none text-slate-900">
                     Organize your events in one place
                   </h1>
-                  <p className="max-w-[600px] text-slate-500 md:text-xl">
+                  <p className="max-w-[600px] text-slate-500 md:text-xl pt-3">
                     Simplify event registration, attendee management, and
                     scheduling with our comprehensive platform.
                   </p>
                 </div>
-                <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                  <button className="inline-flex items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </button>
-                  <button className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
-                    Schedule Demo
-                  </button>
-                </div>
+                {!currentUser ? (
+                  <div className="flex flex-col gap-2 min-[400px]:flex-row">
+                    <button
+                      onClick={handleTrialLogin}
+                      className="inline-flex items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                    >
+                      Start Free Trial
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </button>
+                    <Link href="#contact">
+                      <button className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
+                        Schedule Demo
+                      </button>
+                    </Link>
+                  </div>
+                ) : (
+                  <a href="/dashboard">
+                    <button className="inline-flex items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
+                      Dashboard
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </button>
+                  </a>
+                )}
               </div>
               <Image
                 src="/dashboard.png"
@@ -119,6 +148,7 @@ export default function LandingPage() {
                 height={550}
                 alt="Dashboard Preview"
                 className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last"
+                priority={true}
               />
             </div>
           </div>
@@ -559,43 +589,18 @@ export default function LandingPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-50">
-          <div className="container mx-auto grid items-center justify-center gap-4 px-4 text-center md:px-6">
-            <div className="space-y-3">
-              <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight text-slate-900">
-                Ready to Streamline Your Event Management?
-              </h2>
-              <p className="mx-auto max-w-[600px] text-slate-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Join thousands of organizations that trust WO-Reg to organize
-                their events.
-              </p>
-            </div>
-            <div className="mx-auto w-full max-w-sm space-y-2">
-              <form className="flex space-x-2">
-                <input
-                  className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Enter your email"
-                  type="email"
-                />
-                <button className="rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
-                  Get Started
-                </button>
-              </form>
-              <p className="text-xs text-slate-500">
-                Start your free 14-day trial. No credit card required.
-              </p>
-            </div>
-          </div>
-        </section>
+        <CTASection />
       </main>
 
       {/* Footer */}
       <footer className="w-full border-t border-slate-200 py-6 md:py-0">
         <div className="container mx-auto flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-6 w-6 text-slate-700" />
-            <span className="text-lg font-bold text-slate-900">WO-Reg</span>
-          </div>
+          <Link href="#hero">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-6 w-6 text-slate-700" />
+              <span className="text-lg font-bold text-slate-900">WO-Reg</span>
+            </div>
+          </Link>
           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
             <Link
               href="#"
