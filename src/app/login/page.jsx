@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase/firebase";
-
+import { useAuth } from "@/lib/contexts/AuthContext";
+import useUserInfo from "@/hooks/useUserInfo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,27 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const { currentUser } = useAuth()
+  const { userInfo, loadingUser } = useUserInfo(currentUser);
   const router = useRouter();
+
+  useEffect(() => {
+    if (currentUser && userInfo?.email) {
+      switch(userInfo?.role) {
+        case 'sadmin':
+          router.push('/dashboard/');
+          break;
+        case 'admin':
+          router.push('/dashboard/');
+          break;
+        case 'user':
+          router.push('/dashboard/');
+          break;
+        default:
+          router.push('/');
+      }
+    }
+  }, [currentUser, router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
