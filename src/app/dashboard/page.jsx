@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import useUserInfo from "@/hooks/useUserInfo";
 import GuestsTable from "@/components/SAdminDashboard/GuestsTable";
+import TrialGuestTable from "@/components/TrialDashboard/TrialGuestTable";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -35,8 +36,7 @@ export default function Dashboard() {
         <ChartAreaInteractive />
       </div>
       {/* <DataTable data={data} /> */}
-
-      <GuestsTable />
+      {userInfo.email === "trial@trial.com" ? <TrialGuestTable/> : <GuestsTable />}
     </>
   );
 }

@@ -49,12 +49,16 @@ export default function AccountsTable() {
   const [registerDialogOpen, setRegisterDialogOpen] = useState(false);
 
   const columns = ["name", "email", "role"];
-  const filteredAccounts = allAccounts;
+  const filteredAccounts = allAccounts || [];
 
   const totalPages = Math.ceil(filteredAccounts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedAccounts = filteredAccounts.slice(startIndex, endIndex);
+  const paginatedAccounts = filteredAccounts.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  const isTrialUser = userInfo?.email === "trial@trial.com";
 
   const handleItemsPerPageChange = (value) => {
     setItemsPerPage(Number(value));
@@ -83,8 +87,13 @@ export default function AccountsTable() {
           <CardTitle>
             <div className="flex items-center gap-4">
               Accounts List
-              {userInfo?.role === "sadmin" && (
-                <Button variant="outline" onClick={() => setRegisterDialogOpen(true)}>+</Button>
+              {userInfo?.role === "sadmin" && !isTrialUser && (
+                <Button
+                  variant="outline"
+                  onClick={() => setRegisterDialogOpen(true)}
+                >
+                  +
+                </Button>
               )}
             </div>
           </CardTitle>
@@ -120,10 +129,10 @@ export default function AccountsTable() {
               {paginatedAccounts.length > 0 ? (
                 paginatedAccounts.map((account) => {
                   const isCurrentUser = account.email === userInfo.email;
-                  const isSadmin = account.role === "sadmin";
+                  const isSadminAccount = account.role === "sadmin";
 
                   return (
-                    <TableRow key={account.email}>
+                    <TableRow key={account.id}>
                       <TableCell>
                         {account.name}
                         {isCurrentUser && (
@@ -132,11 +141,13 @@ export default function AccountsTable() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>{account.email}</TableCell>
+                      <TableCell>
+                        {isTrialUser ? "***@***" : account.email}
+                      </TableCell>
                       <TableCell>
                         <Select
                           value={account.role}
-                          disabled={isSadmin}
+                          disabled={isSadminAccount || isTrialUser}
                           onValueChange={(value) =>
                             handleRoleSelect(account.id, account.role, value)
                           }

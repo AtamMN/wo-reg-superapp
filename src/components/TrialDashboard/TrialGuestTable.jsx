@@ -1,14 +1,15 @@
+// components/TrialGuestsTable.jsx
 "use client";
+
+import { useState } from "react";
 import ShareGuestDialog from "./ShareGuestDialog";
 import ViewGuestDialog from "./ViewGuestDialog";
 import UpdateGuestDialog from "./UpdateGuestDialog";
 import DeleteGuestDialog from "./DeleteGuestDialog";
-import { useState } from "react";
-import useGuests from "@/hooks/useGuests";
+import AddGuestDialog from "./AddGuestDialog";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -17,7 +18,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -37,64 +37,81 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "../ui/dropdown-menu";
-import { IconCheck, IconChecklist, IconXboxX } from "@tabler/icons-react";
+import { IconCheck, IconXboxX } from "@tabler/icons-react";
 
-const truncateText = (text, maxLength = 20) => {
+function truncateText(text, maxLength = 20) {
   const stringText = String(text);
   return stringText.length > maxLength
     ? `${stringText.substring(0, maxLength)}...`
     : stringText;
-};
+}
 
-export default function GuestsTable(  ) {
-  const { guests, loading, error, columns, updateGuest, softDeleteGuest, updateIsShared } =
-    useGuests();
+export default function TrialGuestsTable() {
+  // Local sample data
+  const initialGuests = [
+    {
+      id: "guest1",
+      name: "Alice",
+      phone: "123-456-7890",
+      address: "123 Elm Street",
+      signature: "https://via.placeholder.com/100x40?text=Sign",
+      timestamp: new Date().toISOString(),
+      isShared: false,
+    },
+    {
+      id: "guest2",
+      name: "Bob",
+      phone: "987-654-3210",
+      address: "456 Oak Avenue",
+      signature: "https://via.placeholder.com/100x40?text=Sign",
+      timestamp: new Date(Date.now() - 3600 * 1000).toISOString(),
+      isShared: true,
+    },
+    {
+      id: "guest3",
+      name: "Charlie",
+      phone: "555-123-4567",
+      address: "789 Pine Road",
+      signature: "https://via.placeholder.com/100x40?text=Sign",
+      timestamp: new Date(Date.now() - 7200 * 1000).toISOString(),
+      isShared: false,
+    },
+  ];
 
+  const [localGuests, setLocalGuests] = useState(initialGuests);
+  const [sharedGuests, setSharedGuests] = useState(
+    new Set(initialGuests.filter((g) => g.isShared).map((g) => g.id))
+  );
+
+  // Columns to display
+  const columns = ["name", "phone", "address", "signature", "timestamp"];
+
+  // Dialog states
   const [selectedGuest, setSelectedGuest] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
+  // Pagination / sorting
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortBy, setSortBy] = useState("timestamp");
-  const [sortOrder, setSortOrder] = useState("asc");
-  const [isShareOpen, setIsShareOpen] = useState(false);
-  const [sharedGuests, setSharedGuests] = useState(new Set());
+  const [sortOrder, setSortOrder] = useState("desc");
 
-  const handleShare = async (guest) => {
-    setSelectedGuest(guest);
-    setIsViewOpen(false);
-    setIsShareOpen(true);
-
-    const newSharedGuests = new Set(sharedGuests);
-    if (newSharedGuests.has(guest.id)) {
-      newSharedGuests.delete(guest.id);
-      await updateIsShared(guest.id, false);
-    } else {
-      newSharedGuests.add(guest.id);
-      await updateIsShared(guest.id, true);
-    }
-
-    setSharedGuests(newSharedGuests);
-  };
-
-  const handleView = (guestId) => {
-    const guest = guests.find((g) => g.id === guestId);
-    setSelectedGuest(guest);
-    setIsViewOpen(true); // Open the View dialog
-  };
-
-  const sortedGuests = [...guests].sort((a, b) => {
+  // SORT & PAGINATION
+  const sortedGuests = [...localGuests].sort((a, b) => {
     const aVal = a[sortBy];
     const bVal = b[sortBy];
 
     if (sortBy === "timestamp") {
       const dateA = new Date(aVal);
       const dateB = new Date(bVal);
-      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+      return sortOrder === "asc"
+        ? dateA.getTime() - dateB.getTime()
+        : dateB.getTime() - dateA.getTime();
     }
-
     return sortOrder === "asc"
       ? String(aVal).localeCompare(String(bVal))
       : String(bVal).localeCompare(String(aVal));
@@ -102,9 +119,12 @@ export default function GuestsTable(  ) {
 
   const totalPages = Math.ceil(sortedGuests.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedGuests = sortedGuests.slice(startIndex, endIndex);
+  const paginatedGuests = sortedGuests.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
+  // Handlers
   const handleItemsPerPageChange = (value) => {
     setItemsPerPage(Number(value));
     setCurrentPage(1);
@@ -119,53 +139,97 @@ export default function GuestsTable(  ) {
     }
   };
 
+  const handleView = (guestId) => {
+    const guest = localGuests.find((g) => g.id === guestId);
+    setSelectedGuest(guest);
+    setIsViewOpen(true);
+  };
+
   const handleEdit = (guestId) => {
-    const guest = guests.find((g) => g.id === guestId);
+    const guest = localGuests.find((g) => g.id === guestId);
     setSelectedGuest(guest);
     setIsEditOpen(true);
   };
 
   const handleDelete = (guestId) => {
-    const guest = guests.find((g) => g.id === guestId);
+    const guest = localGuests.find((g) => g.id === guestId);
     setSelectedGuest(guest);
     setIsDeleteOpen(true);
   };
 
-  const handleUpdateGuest = async (updatedGuest) => {
-    await updateGuest(updatedGuest.id, updatedGuest);
+  const handleShare = (guest) => {
+    setSelectedGuest(guest);
+    setIsViewOpen(false);
+    setIsShareOpen(true);
+
+    const updatedSet = new Set(sharedGuests);
+    if (updatedSet.has(guest.id)) {
+      updatedSet.delete(guest.id);
+    } else {
+      updatedSet.add(guest.id);
+    }
+    setSharedGuests(updatedSet);
+
+    setLocalGuests((prev) =>
+      prev.map((g) => (g.id === guest.id ? { ...g, isShared: !g.isShared } : g))
+    );
   };
 
-  const handleConfirmDelete = async () => {
+  const handleUpdateGuest = (updatedGuest) => {
+    setLocalGuests((prev) =>
+      prev.map((g) => (g.id === updatedGuest.id ? updatedGuest : g))
+    );
+    setIsEditOpen(false);
+  };
+
+  const handleConfirmDelete = () => {
     if (selectedGuest) {
-      await softDeleteGuest(selectedGuest.id);
+      setLocalGuests((prev) => prev.filter((g) => g.id !== selectedGuest.id));
       setIsDeleteOpen(false);
     }
+  };
+
+  const handleAddGuest = (newData) => {
+    const newGuest = {
+      id: `guest${Date.now()}`,
+      name: newData.name,
+      phone: newData.phone,
+      address: newData.address,
+      signature: "https://via.placeholder.com/100x40?text=Sign",
+      timestamp: new Date().toISOString(),
+      isShared: false,
+    };
+    setLocalGuests((prev) => [...prev, newGuest]);
   };
 
   return (
     <div className="p-6">
       <Card className="@container/card">
         <CardHeader className="flex flex-row justify-between items-center">
-          <CardTitle>Guests List</CardTitle>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Items per page:</span>
-              <Select
-                value={String(itemsPerPage)}
-                onValueChange={handleItemsPerPageChange}
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue placeholder={itemsPerPage} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <CardTitle>Trial Guests List</CardTitle>
+            <Button variant="outline" onClick={() => setIsAddOpen(true)}>
+              +
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Items per page:</span>
+            <Select
+              value={String(itemsPerPage)}
+              onValueChange={handleItemsPerPageChange}
+            >
+              <SelectTrigger className="w-20">
+                <SelectValue placeholder={itemsPerPage} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
+
         <CardContent className="overflow-x-auto">
           <div className="min-w-[800px]">
             <Table className="table-fixed w-full text-sm">
@@ -186,23 +250,14 @@ export default function GuestsTable(  ) {
                       </div>
                     </TableHead>
                   ))}
-                  <TableHead className="w-[80px] sticky right-0 bg-white z-10">Actions</TableHead>
+                  <TableHead className="w-[80px] sticky right-0 bg-white z-10">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length + 2} className="h-24 text-center">
-                      Loading...
-                    </TableCell>
-                  </TableRow>
-                ) : error ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length + 2} className="h-24 text-center text-red-500">
-                      {error}
-                    </TableCell>
-                  </TableRow>
-                ) : paginatedGuests.length > 0 ? (
+                {paginatedGuests.length > 0 ? (
                   paginatedGuests.map((guest, index) => (
                     <TableRow key={guest.id}>
                       <TableCell className="w-[50px] text-center">
@@ -254,10 +309,14 @@ export default function GuestsTable(  ) {
                                 <IconXboxX />
                               )}
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleView(guest.id)}>
+                            <DropdownMenuItem
+                              onClick={() => handleView(guest.id)}
+                            >
                               View
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(guest.id)}>
+                            <DropdownMenuItem
+                              onClick={() => handleEdit(guest.id)}
+                            >
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -285,6 +344,7 @@ export default function GuestsTable(  ) {
             </Table>
           </div>
         </CardContent>
+
         <CardFooter className="flex justify-between items-center">
           <div className="text-sm text-muted-foreground">
             Page {currentPage} of {totalPages}
@@ -309,6 +369,7 @@ export default function GuestsTable(  ) {
           </div>
         </CardFooter>
       </Card>
+
       {/* Dialogs */}
       {selectedGuest && (
         <>
@@ -336,6 +397,12 @@ export default function GuestsTable(  ) {
           />
         </>
       )}
+
+      <AddGuestDialog
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+        onAdd={handleAddGuest}
+      />
     </div>
   );
 }
