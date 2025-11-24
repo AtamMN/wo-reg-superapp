@@ -48,17 +48,9 @@ const truncateText = (text, maxLength = 20) => {
     : stringText;
 };
 
-<<<<<<< HEAD
-export default function GuestsTable() {
-  const [attendance, setAttendance] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const columns = ["userName", "userEmail", "date", "timestamp"];
-=======
 export default function GuestsTable(  ) {
   const { guests, loading, error, columns, updateGuest, softDeleteGuest, updateIsShared } =
     useGuests();
->>>>>>> 8ad1c85cb3e23c5265f71f580928413cb8abf644
 
   const [selectedGuest, setSelectedGuest] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
