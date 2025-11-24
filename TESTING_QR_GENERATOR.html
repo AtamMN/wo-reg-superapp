@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator untuk Testing Presensi</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        #qrcode {
+            margin: 20px auto;
+            padding: 20px;
+            border: 2px solid #ccc;
+            display: inline-block;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .info {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 QR Code Generator untuk Testing Presensi</h1>
+    
+    <div class="info">
+        <h3>📋 Cara Penggunaan:</h3>
+        <ol>
+            <li>Klik tombol "Generate QR Code" di bawah</li>
+            <li>QR Code akan muncul (bisa berisi teks apa saja)</li>
+            <li>Scan QR ini menggunakan aplikasi presensi</li>
+            <li>Sistem akan catat kehadiran dengan timestamp WIB</li>
+            <li>User yang sama hanya bisa scan 1x per hari</li>
+        </ol>
+        <p><strong>Catatan:</strong> QR Code ini hanya berisi teks "PRESENSI_2025" untuk trigger presensi. Sistem akan ambil data user dari login session.</p>
+    </div>
+
+    <button onclick="generateQR()">Generate QR Code</button>
+    
+    <div id="qrcode"></div>
+    
+    <p id="status"></p>
+
+    <script>
+        function generateQR() {
+            // Clear previous QR
+            document.getElementById('qrcode').innerHTML = '';
+            
+            // Generate QR with simple text (attendance trigger)
+            const qrText = "PRESENSI_2025";
+            
+            QRCode.toCanvas(qrText, { 
+                width: 300,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                }
+            }, function (error, canvas) {
+                if (error) {
+                    document.getElementById('status').innerHTML = 
+                        '<span style="color: red;">❌ Error: ' + error + '</span>';
+                    return;
+                }
+                
+                document.getElementById('qrcode').appendChild(canvas);
+                document.getElementById('status').innerHTML = 
+                    '<span style="color: green;">✅ QR Code berhasil dibuat! Silakan scan untuk presensi.</span>';
+            });
+        }
+
+        // Auto-generate on load
+        window.onload = generateQR;
+    </script>
+</body>
+</html>

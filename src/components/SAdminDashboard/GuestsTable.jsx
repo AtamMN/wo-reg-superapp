@@ -3,8 +3,10 @@ import ShareGuestDialog from "./ShareGuestDialog";
 import ViewGuestDialog from "./ViewGuestDialog";
 import UpdateGuestDialog from "./UpdateGuestDialog";
 import DeleteGuestDialog from "./DeleteGuestDialog";
-import { useState } from "react";
-import useGuests from "@/hooks/useGuests";
+import { useState, useEffect } from "react";
+import { ref, get } from "firebase/database";
+import { db } from "@/lib/firebase/firebase";
+import { formatTimestampWIB } from "@/lib/firebase/attendance";
 import {
   Table,
   TableBody,
@@ -47,8 +49,10 @@ const truncateText = (text, maxLength = 20) => {
 };
 
 export default function GuestsTable() {
-  const { guests, loading, error, columns, updateGuest, softDeleteGuest, updateIsShared } =
-    useGuests();
+  const [attendance, setAttendance] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const columns = ["userName", "userEmail", "date", "timestamp"];
 
   const [selectedGuest, setSelectedGuest] = useState(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -62,30 +66,43 @@ export default function GuestsTable() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [sharedGuests, setSharedGuests] = useState(new Set());
 
-  const handleShare = async (guest) => {
-    setSelectedGuest(guest);
-    setIsViewOpen(false);
-    setIsShareOpen(true);
+  // Fetch attendance data from Firebase
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      try {
+        setLoading(true);
+        const attendanceRef = ref(db, "attendance");
+        const snapshot = await get(attendanceRef);
 
-    const newSharedGuests = new Set(sharedGuests);
-    if (newSharedGuests.has(guest.id)) {
-      newSharedGuests.delete(guest.id);
-      await updateIsShared(guest.id, false);
-    } else {
-      newSharedGuests.add(guest.id);
-      await updateIsShared(guest.id, true);
-    }
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          const attendanceArray = Object.keys(data).map((key) => ({
+            id: key,
+            ...data[key],
+          }));
+          setAttendance(attendanceArray);
+        } else {
+          setAttendance([]);
+        }
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching attendance:", err);
+        setError("Failed to load attendance data");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    setSharedGuests(newSharedGuests);
+    fetchAttendance();
+  }, []);
+
+  const handleView = (attendanceId) => {
+    const record = attendance.find((g) => g.id === attendanceId);
+    setSelectedGuest(record);
+    setIsViewOpen(true);
   };
 
-  const handleView = (guestId) => {
-    const guest = guests.find((g) => g.id === guestId);
-    setSelectedGuest(guest);
-    setIsViewOpen(true); // Open the View dialog
-  };
-
-  const sortedGuests = [...guests].sort((a, b) => {
+  const sortedGuests = [...attendance].sort((a, b) => {
     const aVal = a[sortBy];
     const bVal = b[sortBy];
 
@@ -119,34 +136,11 @@ export default function GuestsTable() {
     }
   };
 
-  const handleEdit = (guestId) => {
-    const guest = guests.find((g) => g.id === guestId);
-    setSelectedGuest(guest);
-    setIsEditOpen(true);
-  };
-
-  const handleDelete = (guestId) => {
-    const guest = guests.find((g) => g.id === guestId);
-    setSelectedGuest(guest);
-    setIsDeleteOpen(true);
-  };
-
-  const handleUpdateGuest = async (updatedGuest) => {
-    await updateGuest(updatedGuest.id, updatedGuest);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (selectedGuest) {
-      await softDeleteGuest(selectedGuest.id);
-      setIsDeleteOpen(false);
-    }
-  };
-
   return (
     <div className="p-6">
       <Card className="@container/card">
         <CardHeader className="flex flex-row justify-between items-center">
-          <CardTitle>Guests List</CardTitle>
+          <CardTitle>Attendance List</CardTitle>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm">Items per page:</span>
@@ -219,13 +213,7 @@ export default function GuestsTable() {
                           }
                         >
                           {column === "timestamp" ? (
-                            new Date(guest[column]).toLocaleString()
-                          ) : column === "signature" ? (
-                            <img
-                              src={guest[column]}
-                              alt="Signature"
-                              className="w-20 h-10 object-contain"
-                            />
+                            formatTimestampWIB(guest[column]) + " WIB"
                           ) : (
                             truncateText(guest[column])
                           )}
@@ -240,31 +228,8 @@ export default function GuestsTable() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              className="text-green-500 flex items-center gap-2"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleShare(guest);
-                              }}
-                            >
-                              Share
-                              {sharedGuests.has(guest.id) ? (
-                                <IconCheck className="text-green-500" />
-                              ) : (
-                                <IconXboxX />
-                              )}
-                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleView(guest.id)}>
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(guest.id)}>
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-500"
-                              onClick={() => handleDelete(guest.id)}
-                            >
-                              Delete
+                              View Details
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -277,7 +242,7 @@ export default function GuestsTable() {
                       colSpan={columns.length + 2}
                       className="h-24 text-center"
                     >
-                      No guests found.
+                      No attendance records found.
                     </TableCell>
                   </TableRow>
                 )}
@@ -316,23 +281,6 @@ export default function GuestsTable() {
             guest={selectedGuest}
             open={isViewOpen}
             onClose={() => setIsViewOpen(false)}
-          />
-          <UpdateGuestDialog
-            guest={selectedGuest}
-            open={isEditOpen}
-            onClose={() => setIsEditOpen(false)}
-            onSave={handleUpdateGuest}
-          />
-          <DeleteGuestDialog
-            guestName={selectedGuest.name}
-            open={isDeleteOpen}
-            onClose={() => setIsDeleteOpen(false)}
-            onConfirm={handleConfirmDelete}
-          />
-          <ShareGuestDialog
-            guest={selectedGuest}
-            open={isShareOpen}
-            onClose={() => setIsShareOpen(false)}
           />
         </>
       )}
