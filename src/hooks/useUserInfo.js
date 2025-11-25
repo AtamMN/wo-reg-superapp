@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { ref, onValue, set, get } from 'firebase/database';
-import { db } from '@/lib/firebase/firebase';
+import { useEffect, useState } from "react";
+import { ref, onValue, set, get, update } from "firebase/database";
+import { db } from "@/lib/firebase/firebase";
 
 export default function useUserInfo(currentUser) {
   const [userInfo, setUserInfo] = useState({
@@ -12,30 +12,36 @@ export default function useUserInfo(currentUser) {
   const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
-    const usersRef = ref(db, 'accounts/users');
-    const unsubscribe = onValue(usersRef, (snapshot) => {
-      const data = snapshot.val() || {};
-      const users = Object.entries(data).map(([id, user]) => ({
-        ...user,
-        role: user.role || 'user',
-        id
-      }));
-      setAllAccounts(users);
+    const usersRef = ref(db, "accounts/users");
+    const unsubscribe = onValue(
+      usersRef,
+      (snapshot) => {
+        const data = snapshot.val() || {};
+        const users = Object.entries(data).map(([id, user]) => ({
+          ...user,
+          role: user.role || "user",
+          id,
+        }));
+        setAllAccounts(users);
 
-      if (currentUser?.email) {
-        const found = users.find(u => u.email.toLowerCase() === currentUser.email.toLowerCase());
-        setUserInfo({
-          name: found?.name || "Guest",
-          role: (found?.role || "user").toLowerCase(),
-          email: found?.email || currentUser.email
-        });
+        if (currentUser?.email) {
+          const found = users.find(
+            (u) => u.email.toLowerCase() === currentUser.email.toLowerCase()
+          );
+          setUserInfo({
+            name: found?.name || "Guest",
+            role: (found?.role || "user").toLowerCase(),
+            email: found?.email || currentUser.email,
+          });
+        }
+
+        setLoadingUser(false);
+      },
+      (err) => {
+        console.error("Error fetching users:", err);
+        setLoadingUser(false);
       }
-
-      setLoadingUser(false);
-    }, (err) => {
-      console.error("Error fetching users:", err);
-      setLoadingUser(false);
-    });
+    );
 
     return () => unsubscribe();
   }, [currentUser]);
@@ -51,15 +57,24 @@ export default function useUserInfo(currentUser) {
       // Update the role and set it back to Firebase
       const updatedUserData = {
         ...currentUserData,
-        role: newRole
+        role: newRole,
       };
 
       // Set the updated user data back to Firebase
       await set(userRef, updatedUserData);
     } else {
-      console.error('User not found');
+      console.error("User not found");
     }
   };
 
-  return { allAccounts, userInfo, loadingUser, updateRole };
+  const updateAccount = async (userId, updatedData) => {
+    try {
+      await update(ref(db, `/accounts/users/${userId}`), updatedData);
+      alert("Account updated successfully!");
+    } catch (err) {
+      console.error("Update error:", err);
+      alert("Failed to update account");
+    }
+  };
+  return { allAccounts, userInfo, loadingUser, updateRole, updateAccount };
 }

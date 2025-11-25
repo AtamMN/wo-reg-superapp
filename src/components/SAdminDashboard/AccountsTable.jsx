@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useUserInfo from "@/hooks/useUserInfo";
 import {
   Table,
@@ -33,22 +33,31 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/contexts/AuthContext";
-import RegisterAccountDialog from "./RegisterAccountDialog"; // pastikan path sesuai
+import RegisterAccountDialog from "./RegisterAccountDialog";
+import { Pencil, Trash } from "lucide-react";
+import AccountEditDialog from "./AccountEditDialog";
 
 const roles = ["admin", "user"];
 
 export default function AccountsTable() {
   const { currentUser } = useAuth();
-  const { allAccounts, userInfo, updateRole } = useUserInfo(currentUser);
+  const { allAccounts, userInfo, updateRole, deleteAccount } =
+    useUserInfo(currentUser);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingRoleChange, setPendingRoleChange] = useState(null);
 
-  // Dialog register
   const [registerDialogOpen, setRegisterDialogOpen] = useState(false);
 
-  const columns = ["name", "email", "role"];
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editData, setEditData] = useState(null);
+
+  const columns = ["name", "email", "role", "actions"];
   const filteredAccounts = allAccounts || [];
 
   const totalPages = Math.ceil(filteredAccounts.length / itemsPerPage);
@@ -78,6 +87,24 @@ export default function AccountsTable() {
       setPendingRoleChange(null);
       setDialogOpen(false);
     }
+  };
+
+  const handleDeleteAccount = (account) => {
+    setPendingDelete(account);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (pendingDelete) {
+      deleteAccount(pendingDelete.id);
+      setPendingDelete(null);
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  const handleEditAccount = (account) => {
+    setEditData(account);
+    setEditDialogOpen(true);
   };
 
   return (
@@ -114,6 +141,7 @@ export default function AccountsTable() {
             </Select>
           </div>
         </CardHeader>
+
         <CardContent>
           <Table>
             <TableHeader>
@@ -125,6 +153,7 @@ export default function AccountsTable() {
                 ))}
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {paginatedAccounts.length > 0 ? (
                 paginatedAccounts.map((account) => {
@@ -164,6 +193,30 @@ export default function AccountsTable() {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      {/* ACTION BUTTONS */}
+                      {userInfo?.role === "sadmin" && (
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              onClick={() => handleEditAccount(account)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+
+                            {!isSadminAccount && (
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                onClick={() => handleDeleteAccount(account)}
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })
@@ -180,6 +233,7 @@ export default function AccountsTable() {
             </TableBody>
           </Table>
         </CardContent>
+
         <CardFooter className="flex justify-between items-center">
           <div className="text-sm text-muted-foreground">
             Page {currentPage} of {totalPages}
@@ -205,7 +259,7 @@ export default function AccountsTable() {
         </CardFooter>
       </Card>
 
-      {/* Confirmation Dialog for role change */}
+      {/* Confirm Role Change Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -224,12 +278,56 @@ export default function AccountsTable() {
         </DialogContent>
       </Dialog>
 
-      {/* Register Account Dialog */}
+      {/* Confirm Delete Dialog */}
+      <AccountDeleteDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        pendingDelete={pendingDelete}
+        onConfirm={confirmDelete}
+      />
+
+      {/* Edit Account Dialog */}
+      <AccountEditDialog
+        isOpen={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        editData={editData}
+      />
+
       <RegisterAccountDialog
         isOpen={registerDialogOpen}
         onClose={() => setRegisterDialogOpen(false)}
         userRole={userInfo?.role}
       />
     </div>
+  );
+}
+
+// AccountDeleteDialog Component
+export function AccountDeleteDialog({
+  isOpen,
+  onClose,
+  pendingDelete,
+  onConfirm,
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Account?</DialogTitle>
+        </DialogHeader>
+        <p>
+          Are you sure you want to delete <strong>{pendingDelete?.name}</strong>
+          ?
+        </p>
+        <DialogFooter className="mt-4">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

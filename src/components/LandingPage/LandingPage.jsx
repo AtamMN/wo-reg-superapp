@@ -10,6 +10,7 @@ import {
   FileText,
   Instagram,
   Linkedin,
+  Scan,
   Twitter,
   Users,
 } from "lucide-react";
@@ -134,12 +135,20 @@ export default function LandingPage() {
                     </Link>
                   </div>
                 ) : (
-                  <a href="/dashboard">
-                    <button className="inline-flex items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
-                      Dashboard
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </button>
-                  </a>
+                  <div className="flex flex-col gap-2 min-[400px]:flex-row">
+                    <a href="/scanQR">
+                      <button className="inline-flex items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
+                        Scan QR
+                        <Scan className="ml-2 h-4 w-4" />
+                      </button>
+                    </a>
+                    <a href="/dashboard">
+                      <button className="inline-flex items-center justify-center rounded-md bg-slate-400 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2">
+                        Dashboard
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </button>
+                    </a>
+                  </div>
                 )}
               </div>
               <Image
