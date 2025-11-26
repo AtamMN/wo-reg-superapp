@@ -39,9 +39,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "../ui/dropdown-menu";
-import { IconCheck, IconChecklist, IconXboxX } from "@tabler/icons-react";
 
 const truncateText = (text, maxLength = 20) => {
+  if (!text) return "-";
   const stringText = String(text);
   return stringText.length > maxLength
     ? `${stringText.substring(0, maxLength)}...`
@@ -52,38 +52,57 @@ export default function GuestsTable() {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const columns = ["userName", "userEmail", "date", "timestamp"];
+
+  // Kolom table baru mengikuti struktur rtdb
+  const columns = ["name", "email", "date", "masuk", "keluar"];
 
   const [selectedGuest, setSelectedGuest] = useState(null);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortBy, setSortBy] = useState("timestamp");
-  const [sortOrder, setSortOrder] = useState("asc");
-  const [isShareOpen, setIsShareOpen] = useState(false);
-  const [sharedGuests, setSharedGuests] = useState(new Set());
+  const [sortBy, setSortBy] = useState("date");
+  const [sortOrder, setSortOrder] = useState("desc");
 
-  // Fetch attendance data from Firebase
+  // Fetch attendance (STRUKTUR BARU)
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
         setLoading(true);
+
         const attendanceRef = ref(db, "attendance");
         const snapshot = await get(attendanceRef);
 
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const attendanceArray = Object.keys(data).map((key) => ({
-            id: key,
-            ...data[key],
-          }));
-          setAttendance(attendanceArray);
-        } else {
+        if (!snapshot.exists()) {
           setAttendance([]);
+          return;
         }
+
+        const data = snapshot.val();
+
+        const formatted = [];
+
+        // Loop userId
+        Object.keys(data).forEach((userId) => {
+          const userRecords = data[userId];
+
+          // // Loop tanggal
+          Object.keys(userRecords).forEach((dateKey) => {
+            const record = userRecords[dateKey];
+
+            formatted.push({
+              id: `${userId}-${dateKey}`,
+              userId,
+              userName: record.name || "-",
+              userEmail: record.email || "-",
+              date: dateKey,
+              masuk: record.masuk || null,
+              keluar: record.keluar || null,
+            });
+          });
+        });
+      
+        setAttendance(formatted);
         setError(null);
       } catch (err) {
         console.error("Error fetching attendance:", err);
@@ -96,20 +115,26 @@ export default function GuestsTable() {
     fetchAttendance();
   }, []);
 
-  const handleView = (attendanceId) => {
-    const record = attendance.find((g) => g.id === attendanceId);
+  const handleView = (id) => {
+    const record = attendance.find((g) => g.id === id);
     setSelectedGuest(record);
     setIsViewOpen(true);
   };
 
   const sortedGuests = [...attendance].sort((a, b) => {
-    const aVal = a[sortBy];
-    const bVal = b[sortBy];
+    let aVal = a[sortBy];
+    let bVal = b[sortBy];
 
-    if (sortBy === "timestamp") {
-      const dateA = new Date(aVal);
-      const dateB = new Date(bVal);
-      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+    if (sortBy === "masuk" || sortBy === "keluar") {
+      aVal = aVal ? new Date(aVal) : 0;
+      bVal = bVal ? new Date(bVal) : 0;
+      return sortOrder === "asc" ? aVal - bVal : bVal - aVal;
+    }
+
+    if (sortBy === "date") {
+      return sortOrder === "asc"
+        ? new Date(aVal) - new Date(bVal)
+        : new Date(bVal) - new Date(aVal);
     }
 
     return sortOrder === "asc"
@@ -119,17 +144,14 @@ export default function GuestsTable() {
 
   const totalPages = Math.ceil(sortedGuests.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedGuests = sortedGuests.slice(startIndex, endIndex);
-
-  const handleItemsPerPageChange = (value) => {
-    setItemsPerPage(Number(value));
-    setCurrentPage(1);
-  };
+  const paginatedGuests = sortedGuests.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   const handleSortToggle = (column) => {
     if (sortBy === column) {
-      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortBy(column);
       setSortOrder("asc");
@@ -138,97 +160,97 @@ export default function GuestsTable() {
 
   return (
     <div className="p-6">
-      <Card className="@container/card">
+      <Card>
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle>Attendance List</CardTitle>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Items per page:</span>
-              <Select
-                value={String(itemsPerPage)}
-                onValueChange={handleItemsPerPageChange}
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue placeholder={itemsPerPage} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <span className="text-sm">Items per page:</span>
+            <Select
+              value={String(itemsPerPage)}
+              onValueChange={(v) => setItemsPerPage(Number(v))}
+            >
+              <SelectTrigger className="w-20">
+                <SelectValue placeholder={itemsPerPage} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
+
         <CardContent className="overflow-x-auto">
-          <div className="min-w-[800px]">
+          <div className="min-w-[900px]">
             <Table className="table-fixed w-full text-sm">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[50px]">#</TableHead>
-                  {columns.map((column) => (
+
+                  {columns.map((c) => (
                     <TableHead
-                      key={column}
-                      className={`capitalize cursor-pointer select-none whitespace-nowrap ${
-                        sortBy === column ? "text-blue-600 font-semibold" : ""
+                      key={c}
+                      className={`capitalize cursor-pointer ${
+                        sortBy === c ? "text-blue-600 font-semibold" : ""
                       }`}
-                      onClick={() => handleSortToggle(column)}
+                      onClick={() => handleSortToggle(c)}
                     >
-                      <div className="flex items-center gap-1">
-                        {column}
-                        {sortBy === column && (sortOrder === "asc" ? "↑" : "↓")}
-                      </div>
+                      {c}
+                      {sortBy === c && (sortOrder === "asc" ? " ↑" : " ↓")}
                     </TableHead>
                   ))}
-                  <TableHead className="w-[80px] sticky right-0 bg-white z-10">Actions</TableHead>
+
+                  <TableHead className="w-[80px] sticky right-0 bg-white z-10">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={columns.length + 2} className="h-24 text-center">
+                    <TableCell
+                      colSpan={columns.length + 2}
+                      className="text-center"
+                    >
                       Loading...
                     </TableCell>
                   </TableRow>
-                ) : error ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length + 2} className="h-24 text-center text-red-500">
-                      {error}
-                    </TableCell>
-                  </TableRow>
                 ) : paginatedGuests.length > 0 ? (
-                  paginatedGuests.map((guest, index) => (
-                    <TableRow key={guest.id}>
-                      <TableCell className="w-[50px] text-center">
+                  paginatedGuests.map((row, index) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="text-center">
                         {startIndex + index + 1}
                       </TableCell>
-                      {columns.map((column) => (
-                        <TableCell
-                          key={column}
-                          className="max-w-[200px] truncate overflow-hidden text-ellipsis whitespace-nowrap"
-                          title={
-                            column !== "signature" && column !== "timestamp"
-                              ? String(guest[column])
-                              : undefined
-                          }
-                        >
-                          {column === "timestamp" ? (
-                            formatTimestampWIB(guest[column]) + " WIB"
-                          ) : (
-                            truncateText(guest[column])
-                          )}
-                        </TableCell>
-                      ))}
-                      <TableCell className="w-[80px] sticky right-0 bg-white z-10">
+
+                      <TableCell>{row.userName}</TableCell>
+                      <TableCell>{row.userEmail}</TableCell>
+                      <TableCell>{row.date}</TableCell>
+
+                      <TableCell>
+                        {row.masuk
+                          ? formatTimestampWIB(row.masuk) + " WIB"
+                          : "-"}
+                      </TableCell>
+
+                      <TableCell>
+                        {row.keluar
+                          ? formatTimestampWIB(row.keluar) + " WIB"
+                          : "-"}
+                      </TableCell>
+
+                      <TableCell className="sticky right-0 bg-white">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleView(guest.id)}>
+                            <DropdownMenuItem
+                              onClick={() => handleView(row.id)}
+                            >
                               View Details
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -240,9 +262,9 @@ export default function GuestsTable() {
                   <TableRow>
                     <TableCell
                       colSpan={columns.length + 2}
-                      className="h-24 text-center"
+                      className="text-center"
                     >
-                      No attendance records found.
+                      No attendance found.
                     </TableCell>
                   </TableRow>
                 )}
@@ -250,39 +272,37 @@ export default function GuestsTable() {
             </Table>
           </div>
         </CardContent>
+
         <CardFooter className="flex justify-between items-center">
-          <div className="text-sm text-muted-foreground">
+          <p className="text-sm">
             Page {currentPage} of {totalPages}
-          </div>
+          </p>
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
             >
-              Previous
+              Prev
             </Button>
             <Button
               variant="outline"
-              onClick={() =>
-                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-              }
               disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
             >
               Next
             </Button>
           </div>
         </CardFooter>
       </Card>
-      {/* Dialogs */}
+
+      {/* Dialog */}
       {selectedGuest && (
-        <>
-          <ViewGuestDialog
-            guest={selectedGuest}
-            open={isViewOpen}
-            onClose={() => setIsViewOpen(false)}
-          />
-        </>
+        <ViewGuestDialog
+          guest={selectedGuest}
+          open={isViewOpen}
+          onClose={() => setIsViewOpen(false)}
+        />
       )}
     </div>
   );

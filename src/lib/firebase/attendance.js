@@ -1,5 +1,5 @@
 // lib/firebase/attendance.js
-import { ref, get, query, orderByChild, equalTo, set, push } from "firebase/database";
+import { ref, get, set, update } from "firebase/database";
 import { db } from "@/lib/firebase/firebase";
 
 /**
@@ -7,28 +7,26 @@ import { db } from "@/lib/firebase/firebase";
  */
 function getTodayDateWIB() {
   const now = new Date();
-  // Convert to WIB (UTC+7)
-  const wibOffset = 7 * 60; // 7 hours in minutes
-  const localOffset = now.getTimezoneOffset(); // Local offset in minutes
+  const wibOffset = 7 * 60; 
+  const localOffset = now.getTimezoneOffset();
   const wibTime = new Date(now.getTime() + (wibOffset + localOffset) * 60000);
-  
+
   const year = wibTime.getFullYear();
-  const month = String(wibTime.getMonth() + 1).padStart(2, '0');
-  const day = String(wibTime.getDate()).padStart(2, '0');
-  
+  const month = String(wibTime.getMonth() + 1).padStart(2, "0");
+  const day = String(wibTime.getDate()).padStart(2, "0");
+
   return `${year}-${month}-${day}`;
 }
 
 /**
- * Get current timestamp in WIB timezone
+ * Get current timestamp (ISO) in WIB timezone
  */
 function getTimestampWIB() {
   const now = new Date();
-  // Convert to WIB (UTC+7)
   const wibOffset = 7 * 60;
   const localOffset = now.getTimezoneOffset();
   const wibTime = new Date(now.getTime() + (wibOffset + localOffset) * 60000);
-  
+
   return wibTime.toISOString();
 }
 
@@ -37,42 +35,34 @@ function getTimestampWIB() {
  */
 export function formatTimestampWIB(timestamp) {
   const date = new Date(timestamp);
-  return date.toLocaleString('id-ID', {
-    timeZone: 'Asia/Jakarta',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
+  return date.toLocaleString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
   });
 }
 
 /**
- * Check if user already did attendance today
- * @param {string} userId - User ID
- * @returns {Promise<{exists: boolean, timestamp?: string}>}
+ * Check today's attendance (return masuk / keluar)
+ * @param {string} userId
  */
 export async function checkTodayAttendance(userId) {
   try {
     const today = getTodayDateWIB();
-    const attendanceRef = ref(db, "attendance");
+    const attendanceRef = ref(db, `attendance/${userId}/${today}`);
+
     const snapshot = await get(attendanceRef);
-    
+
     if (snapshot.exists()) {
-      const attendanceData = snapshot.val();
-      
-      // Loop through all attendance records
-      for (const key in attendanceData) {
-        const record = attendanceData[key];
-        if (record.userId === userId && record.date === today) {
-          return {
-            exists: true,
-            timestamp: record.timestamp
-          };
-        }
-      }
+      return {
+        exists: true,
+        data: snapshot.val(),
+      };
     }
-    
-    return { exists: false };
+
+    return { exists: false, data: null };
   } catch (error) {
     console.error("Error checking attendance:", error);
     throw error;
@@ -80,32 +70,37 @@ export async function checkTodayAttendance(userId) {
 }
 
 /**
- * Save attendance record
- * @param {string} userId - User ID
- * @param {string} userName - User name
- * @param {string} userEmail - User email
- * @returns {Promise<{success: boolean, timestamp: string}>}
+ * Save Attendance (masuk / keluar)
+ * @param {string} userId
+ * @param {string} userName
+ * @param {string} userEmail
+ * @param {"masuk"|"keluar"} type
  */
-export async function saveAttendance(userId, userName, userEmail) {
+export async function saveAttendance(userId, userName, userEmail, type) {
   try {
     const timestamp = getTimestampWIB();
-    const date = getTodayDateWIB();
-    
-    const attendanceRef = ref(db, "attendance");
-    const newAttendanceRef = push(attendanceRef);
-    
-    await set(newAttendanceRef, {
-      userId,
-      userName,
-      userEmail,
-      timestamp,
-      date,
-      createdAt: new Date().toISOString()
-    });
-    
+    const today = getTodayDateWIB();
+    const attendancePath = `attendance/${userId}/${today}`;
+
+    const updates = {};
+
+    // Simpan info user (sekali per hari)
+    updates[`${attendancePath}/userId`] = userId;
+    updates[`${attendancePath}/name`] = userName;
+    updates[`${attendancePath}/email`] = userEmail;
+
+    // Simpan jam masuk atau keluar
+    if (type === "masuk") {
+      updates[`${attendancePath}/masuk`] = timestamp;
+    } else if (type === "keluar") {
+      updates[`${attendancePath}/keluar`] = timestamp;
+    }
+
+    await update(ref(db), updates);
+
     return {
       success: true,
-      timestamp
+      timestamp,
     };
   } catch (error) {
     console.error("Error saving attendance:", error);

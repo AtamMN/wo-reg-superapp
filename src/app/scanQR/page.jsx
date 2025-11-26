@@ -2,7 +2,11 @@
 import { useEffect, useState } from "react";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { useAuth } from "@/lib/contexts/AuthContext";
-import { checkTodayAttendance, saveAttendance, formatTimestampWIB } from "@/lib/firebase/attendance";
+import {
+  checkTodayAttendance,
+  saveAttendance,
+  formatTimestampWIB,
+} from "@/lib/firebase/attendance";
 import { useRouter } from "next/navigation";
 
 export default function QRScannerPage() {
@@ -26,7 +30,9 @@ export default function QRScannerPage() {
     const getVideoDevices = async () => {
       try {
         const mediaDevices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = mediaDevices.filter((d) => d.kind === "videoinput");
+        const videoDevices = mediaDevices.filter(
+          (d) => d.kind === "videoinput"
+        );
         setDevices(videoDevices);
         if (videoDevices.length > 0) {
           setSelectedDeviceId(videoDevices[0].deviceId);
@@ -42,74 +48,129 @@ export default function QRScannerPage() {
   const handleScan = async (result) => {
     if (result && !processing) {
       const text =
-        result[0].rawValue ||
+        result[0]?.rawValue ||
         result.data ||
         result.text ||
         (typeof result === "string" ? result : JSON.stringify(result));
 
-      // Prevent scanning same code repeatedly within 2 seconds
-      if (text && text !== lastScanned) {
-        setLastScanned(text);
-        setProcessing(true);
-        
-        // Process attendance
-        await processAttendance();
+      if (!text) return;
 
-        // Clear lastScanned after 2 seconds
-        setTimeout(() => {
-          setLastScanned("");
-          setProcessing(false);
-        }, 2000);
+      // Cegah double scan
+      if (text === lastScanned) return;
+
+      // Validasi QR
+      if (text !== "PRESENSI_2025" && text !== "KELUAR_2025") {
+        setMessage({
+          type: "error",
+          text: "QR tidak valid! Gunakan QR Presensi resmi.",
+        });
+        setScanning(false); // TUTUP SCANNER
+        return;
       }
+
+      setLastScanned(text);
+      setProcessing(true);
+
+      // Kirim jenis QR
+      await processAttendance(text);
+
+      // Reset anti-spam
+      setTimeout(() => {
+        setLastScanned("");
+        setProcessing(false);
+      }, 2000);
     }
   };
 
-  const processAttendance = async () => {
+  const processAttendance = async (qrType) => {
     try {
       if (!currentUser || !userRole) {
         setMessage({
           type: "error",
-          text: "Anda harus login terlebih dahulu"
+          text: "Anda harus login terlebih dahulu",
         });
+        setScanning(false);
         return;
       }
 
-      // Check if already attended today
       const checkResult = await checkTodayAttendance(currentUser.uid);
-      
-      if (checkResult.exists) {
-        const timeFormatted = formatTimestampWIB(checkResult.timestamp);
-        setMessage({
-          type: "error",
-          text: `Anda sudah melakukan presensi hari ini pada ${timeFormatted} WIB`
-        });
-        setScanning(false);
-        return;
+
+      const userName =
+        userRole.roleData?.name || currentUser.displayName || currentUser.email;
+
+      // ===== PRESENSI MASUK =====
+      if (qrType === "PRESENSI_2025") {
+        if (checkResult.exists && checkResult.data?.masuk) {
+          const tf = formatTimestampWIB(checkResult.data.masuk);
+          setMessage({
+            type: "error",
+            text: `Anda sudah presensi masuk hari ini pada ${tf} WIB`,
+          });
+          setScanning(false);
+          return;
+        }
+
+        const saveResult = await saveAttendance(
+          currentUser.uid,
+          userName,
+          currentUser.email,
+          "masuk"
+        );
+
+        if (saveResult.success) {
+          const tf = formatTimestampWIB(saveResult.timestamp);
+          setMessage({
+            type: "success",
+            text: `✅ Presensi MASUK berhasil pada ${tf} WIB`,
+          });
+          setScanning(false); // Tutup scanner setelah berhasil
+        }
       }
 
-      // Save attendance
-      const userName = userRole.roleData?.name || currentUser.displayName || currentUser.email;
-      const saveResult = await saveAttendance(
-        currentUser.uid,
-        userName,
-        currentUser.email
-      );
+      // ===== PRESENSI KELUAR =====
+      else if (qrType === "KELUAR_2025") {
+        if (!checkResult.exists || !checkResult.data?.masuk) {
+          setMessage({
+            type: "error",
+            text: "Anda belum presensi masuk hari ini!",
+          });
+          setScanning(false);
+          return;
+        }
 
-      if (saveResult.success) {
-        const timeFormatted = formatTimestampWIB(saveResult.timestamp);
-        setMessage({
-          type: "success",
-          text: `✅ Presensi berhasil pada ${timeFormatted} WIB`
-        });
-        setScanning(false);
+        if (checkResult.data?.keluar) {
+          const tf = formatTimestampWIB(checkResult.data.keluar);
+          setMessage({
+            type: "error",
+            text: `Anda sudah presensi keluar hari ini pada ${tf} WIB`,
+          });
+          setScanning(false);
+          return;
+        }
+
+        const saveResult = await saveAttendance(
+          currentUser.uid,
+          userName,
+          currentUser.email,
+          "keluar"
+        );
+
+        if (saveResult.success) {
+          const tf = formatTimestampWIB(saveResult.timestamp);
+          setMessage({
+            type: "success",
+            text: `✅ Presensi KELUAR berhasil pada ${tf} WIB`,
+          });
+          setScanning(false);
+        }
       }
-
     } catch (error) {
       console.error("Error processing attendance:", error);
       setMessage({
         type: "error",
-        text: "Terjadi kesalahan. Silakan coba lagi."
+        text: "Terjadi kesalahan. Silakan coba lagi.",
       });
+      setScanning(false);
     }
   };
 
@@ -130,15 +191,20 @@ export default function QRScannerPage() {
       <h1 className="text-2xl font-bold mb-4">Presensi QR Scanner</h1>
 
       <div className="mb-4 text-sm text-gray-600">
-        <p>Login sebagai: <strong>{userRole?.roleData?.name || currentUser.email}</strong></p>
+        <p>
+          Login sebagai:{" "}
+          <strong>{userRole?.roleData?.name || currentUser.email}</strong>
+        </p>
       </div>
 
       {message.text && (
-        <div className={`mb-4 p-4 rounded max-w-md mx-auto ${
-          message.type === "success" 
-            ? "bg-green-100 text-green-800 border border-green-300" 
-            : "bg-red-100 text-red-800 border border-red-300"
-        }`}>
+        <div
+          className={`mb-4 p-4 rounded max-w-md mx-auto ${
+            message.type === "success"
+              ? "bg-green-100 text-green-800 border border-green-300"
+              : "bg-red-100 text-red-800 border border-red-300"
+          }`}
+        >
           <p className="font-medium">{message.text}</p>
         </div>
       )}
