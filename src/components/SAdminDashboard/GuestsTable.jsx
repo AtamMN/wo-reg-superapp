@@ -184,20 +184,22 @@ export default function GuestsTable() {
       <Card>
         <CardHeader className="flex flex-row justify-between items-center">
           <div className="flex gap-2 items-center">
-            <CardTitle>Attendance List</CardTitle>{" "}
-            <Button
-              variant="outline"
-              onClick={() =>
-                exportAttendancePDF(
-                  filteredGuests,
-                  dateStart,
-                  dateEnd,
-                  formatTimestampWIB
-                )
-              }
-            >
-              Export PDF
-            </Button>
+            <CardTitle>Attendance List</CardTitle>
+            {filterName && filteredGuests.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  exportAttendancePDF(
+                    filteredGuests,
+                    dateStart,
+                    dateEnd,
+                    formatTimestampWIB
+                  )
+                }
+              >
+                Export PDF
+              </Button>
+            )}
           </div>
           <div className="flex gap-2 items-center">
             {/* Filter Name */}

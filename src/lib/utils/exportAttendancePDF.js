@@ -27,6 +27,14 @@ export async function exportAttendancePDF(filteredData, userInfo) {
     ]);
   });
 
+  // Ambil tanggal terawal dan terakhir dari filteredData
+  const dates = filteredData.map(item => item.date).sort();
+  const startDate = dates[0] || "-";
+  const endDate = dates[dates.length - 1] || "-";
+  const dateRangeText = startDate === endDate 
+    ? `Tanggal: ${startDate}` 
+    : `Tanggal: ${startDate} s/d ${endDate}`;
+
   const documentDefinition = {
     pageSize: "A4",
     pageMargins: [40, 100, 40, 50],
@@ -36,11 +44,9 @@ export async function exportAttendancePDF(filteredData, userInfo) {
       columns: [
         [
           { text: "Attendance Report", style: "title" },
-          { text: `Nama: ${filteredData[0].userName}`, style: "sub" },
-          { text: `Email: ${filteredData[0].userEmail}`, style: "sub" },
-          filteredData.startDate && filteredData.endDate
-            ? { text: `Tanggal: ${filteredData[0].date} s/d ${filteredData[-1].date}`, style: "sub" }
-            : { text: "Tanggal: -", style: "sub" }
+          { text: `Nama: ${filteredData[0]?.userName || "-"}`, style: "sub" },
+          { text: `Email: ${filteredData[0]?.userEmail || "-"}`, style: "sub" },
+          { text: dateRangeText, style: "sub" }
         ]
       ],
       margin: [40, 20]
@@ -69,6 +75,6 @@ export async function exportAttendancePDF(filteredData, userInfo) {
   };
 
   pdfMake.createPdf(documentDefinition).download(
-    `Presensi-${filteredData[0].userName}.pdf`
+    `Presensi-${filteredData[0]?.userName || "Unknown"}-${startDate}-${endDate}.pdf`
   );
 }
