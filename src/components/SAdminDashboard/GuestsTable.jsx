@@ -32,13 +32,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Search } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "../ui/dropdown-menu";
+import { exportAttendancePDF } from "@/lib/utils/exportAttendancePDF";
 
 const truncateText = (text, maxLength = 20) => {
   if (!text) return "-";
@@ -63,6 +64,10 @@ export default function GuestsTable() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
+
+  const [filterName, setFilterName] = useState("");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
 
   // Fetch attendance (STRUKTUR BARU)
   useEffect(() => {
@@ -101,7 +106,7 @@ export default function GuestsTable() {
             });
           });
         });
-      
+
         setAttendance(formatted);
         setError(null);
       } catch (err) {
@@ -120,8 +125,24 @@ export default function GuestsTable() {
     setSelectedGuest(record);
     setIsViewOpen(true);
   };
+  const filteredGuests = attendance.filter((item) => {
+    const nameMatch = item.userName
+      .toLowerCase()
+      .includes(filterName.toLowerCase());
 
-  const sortedGuests = [...attendance].sort((a, b) => {
+    // Convert ke Date agar bisa dibandingkan
+    const itemDate = new Date(item.date);
+    const startDate = dateStart ? new Date(dateStart) : null;
+    const endDate = dateEnd ? new Date(dateEnd) : null;
+
+    const dateMatch =
+      (!startDate || itemDate >= startDate) &&
+      (!endDate || itemDate <= endDate);
+
+    return nameMatch && dateMatch;
+  });
+
+  const sortedGuests = [...filteredGuests].sort((a, b) => {
     let aVal = a[sortBy];
     let bVal = b[sortBy];
 
@@ -142,7 +163,7 @@ export default function GuestsTable() {
       : String(bVal).localeCompare(String(aVal));
   });
 
-  const totalPages = Math.ceil(sortedGuests.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredGuests.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedGuests = sortedGuests.slice(
     startIndex,
@@ -159,10 +180,82 @@ export default function GuestsTable() {
   };
 
   return (
-    <div className="p-6">
+    <div className="pr-6 pb-6 pl-6">
       <Card>
         <CardHeader className="flex flex-row justify-between items-center">
-          <CardTitle>Attendance List</CardTitle>
+          <div className="flex gap-2 items-center">
+            <CardTitle>Attendance List</CardTitle>{" "}
+            <Button
+              variant="outline"
+              onClick={() =>
+                exportAttendancePDF(
+                  filteredGuests,
+                  dateStart,
+                  dateEnd,
+                  formatTimestampWIB
+                )
+              }
+            >
+              Export PDF
+            </Button>
+          </div>
+          <div className="flex gap-2 items-center">
+            {/* Filter Name */}
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Filter name..."
+                value={filterName}
+                onChange={(e) => {
+                  setFilterName(e.target.value);
+                  setCurrentPage(1); // reset halaman
+                }}
+                className="border px-2 py-1 rounded-md text-sm"
+              />
+            </div>
+
+            {/* Filter Date Range */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Date:</label>
+
+              <input
+                type="date"
+                value={dateStart}
+                onChange={(e) => {
+                  setDateStart(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="border px-2 py-1 rounded-md text-sm"
+              />
+
+              <span className="text-gray-500 text-sm">to</span>
+
+              <input
+                type="date"
+                value={dateEnd}
+                onChange={(e) => {
+                  setDateEnd(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="border px-2 py-1 rounded-md text-sm"
+              />
+            </div>
+
+            {(filterName || dateStart || dateEnd) && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFilterName("");
+                  setDateStart("");
+                  setDateEnd("");
+                  setCurrentPage(1);
+                }}
+              >
+                Reset
+              </Button>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm">Items per page:</span>
             <Select

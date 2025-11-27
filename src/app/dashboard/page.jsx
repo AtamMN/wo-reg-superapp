@@ -36,7 +36,11 @@ export default function Dashboard() {
         <ChartAreaInteractive />
       </div>
       <DataTable data={data} /> */}
-      {userInfo.email === "trial@trial.com" ? <TrialGuestTable/> : <GuestsTable />}
+      {userInfo.email === "trial@trial.com" ? (
+        <TrialGuestTable />
+      ) : (
+        <GuestsTable />
+      )}
     </>
   );
 }
