@@ -33,7 +33,7 @@ export async function exportAttendancePDF(filteredData, userInfo) {
   const endDate = dates[dates.length - 1] || "-";
   const dateRangeText = startDate === endDate 
     ? `Tanggal: ${startDate}` 
-    : `Tanggal: ${startDate} s/d ${endDate}`;
+    : `Tanggal: ${startDate} s.d. ${endDate}`;
 
   const documentDefinition = {
     pageSize: "A4",
@@ -43,9 +43,9 @@ export async function exportAttendancePDF(filteredData, userInfo) {
     header: {
       columns: [
         [
-          { text: "Attendance Report", style: "title" },
+          { text: "Laporan Kehadiran", style: "title" },
           { text: `Nama: ${filteredData[0]?.userName || "-"}`, style: "sub" },
-          { text: `Email: ${filteredData[0]?.userEmail || "-"}`, style: "sub" },
+          { text: `Pos-el: ${filteredData[0]?.userEmail || "-"}`, style: "sub" },
           { text: dateRangeText, style: "sub" }
         ]
       ],

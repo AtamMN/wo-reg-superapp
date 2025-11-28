@@ -3,7 +3,7 @@ import ShareGuestDialog from "./ShareGuestDialog";
 import ViewGuestDialog from "./ViewGuestDialog";
 import UpdateGuestDialog from "./UpdateGuestDialog";
 import DeleteGuestDialog from "./DeleteGuestDialog";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ref, get } from "firebase/database";
 import { db } from "@/lib/firebase/firebase";
 import { formatTimestampWIB } from "@/lib/firebase/attendance";
@@ -39,6 +39,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "../ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { exportAttendancePDF } from "@/lib/utils/exportAttendancePDF";
 
 const truncateText = (text, maxLength = 20) => {
@@ -68,6 +81,7 @@ export default function GuestsTable() {
   const [filterName, setFilterName] = useState("");
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
+  const [openNamePopover, setOpenNamePopover] = useState(false);
 
   // Fetch attendance (STRUKTUR BARU)
   useEffect(() => {
@@ -125,6 +139,10 @@ export default function GuestsTable() {
     setSelectedGuest(record);
     setIsViewOpen(true);
   };
+
+  // Get unique names for suggestions
+  const uniqueNames = [...new Set(attendance.map(item => item.userName).filter(name => name !== "-"))].sort();
+
   const filteredGuests = attendance.filter((item) => {
     const nameMatch = item.userName
       .toLowerCase()
@@ -202,20 +220,40 @@ export default function GuestsTable() {
             )}
           </div>
           <div className="flex gap-2 items-center">
-            {/* Filter Name */}
-            <div className="flex items-center gap-2">
-              <Search className="w-4 h-4 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Filter name..."
-                value={filterName}
-                onChange={(e) => {
-                  setFilterName(e.target.value);
-                  setCurrentPage(1); // reset halaman
-                }}
-                className="border px-2 py-1 rounded-md text-sm"
-              />
-            </div>
+            {/* Filter Name with Popover Button */}
+            <Popover open={openNamePopover} onOpenChange={setOpenNamePopover}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-48 justify-start text-left font-normal">
+                  <Search className="w-4 h-4 mr-2 text-gray-500" />
+                  {filterName || "Filter name..."}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[500px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search name..." />
+                  <CommandList className="max-h-[400px]">
+                    <CommandEmpty>No name found.</CommandEmpty>
+                    <CommandGroup>
+                      <div className="grid grid-cols-3 gap-1 p-2">
+                        {uniqueNames.map((name) => (
+                          <CommandItem
+                            key={name}
+                            onSelect={() => {
+                              setFilterName(name);
+                              setCurrentPage(1);
+                              setOpenNamePopover(false);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            {name}
+                          </CommandItem>
+                        ))}
+                      </div>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
 
             {/* Filter Date Range */}
             <div className="flex items-center gap-2">
