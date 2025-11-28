@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import useUserInfo from "@/hooks/useUserInfo";
 import GuestsTable from "@/components/SAdminDashboard/GuestsTable";
 import TrialGuestTable from "@/components/TrialDashboard/TrialGuestTable";
+import UserGuestsTable from "@/components/UserDashboard/UserGuestsTable"
 
 export default function Dashboard() {
   const router = useRouter();
@@ -39,8 +40,11 @@ export default function Dashboard() {
       {userInfo.email === "trial@trial.com" ? (
         <TrialGuestTable />
       ) : (
-        <GuestsTable />
+        // <GuestsTable />
+        console.log(userInfo.role)
       )}
+      {userInfo.role === "sadmin" && <GuestsTable/>}
+      {userInfo.role ===  "user" && <UserGuestsTable/>}
     </>
   );
 }
