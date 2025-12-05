@@ -15,15 +15,31 @@ export async function exportAttendancePDF(filteredData, userInfo) {
     return `${hours}:${minutes}:${seconds}`;
   }
 
+  function calculateDuration(masuk, keluar) {
+    if (!masuk || !keluar) return "-";
+
+    const dateIn = new Date(masuk);
+    const dateOut = new Date(keluar);
+    const diffMs = dateOut - dateIn;
+
+    if (diffMs < 0) return "-";
+
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    return `${hours} jam ${minutes} menit`;
+  }
+
   const tableBody = [
-    ["Tanggal","Masuk", "Keluar"]
+    ["Tanggal","Masuk", "Keluar", "Durasi"]
   ];
 
   filteredData.forEach((item) => {
     tableBody.push([
       item.date,
       convertToWIB(item.masuk)+" WIB",
-      convertToWIB(item.keluar)+" WIB"
+      convertToWIB(item.keluar)+" WIB",
+      calculateDuration(item.masuk, item.keluar)
     ]);
   });
 
@@ -34,6 +50,23 @@ export async function exportAttendancePDF(filteredData, userInfo) {
   const dateRangeText = startDate === endDate 
     ? `Tanggal: ${startDate}` 
     : `Tanggal: ${startDate} s.d. ${endDate}`;
+
+  // Hitung total durasi
+  let totalMinutes = 0;
+  filteredData.forEach((item) => {
+    if (item.masuk && item.keluar) {
+      const dateIn = new Date(item.masuk);
+      const dateOut = new Date(item.keluar);
+      const diffMs = dateOut - dateIn;
+      if (diffMs > 0) {
+        totalMinutes += Math.floor(diffMs / (1000 * 60));
+      }
+    }
+  });
+
+  const totalHours = Math.floor(totalMinutes / 60);
+  const remainingMinutes = totalMinutes % 60;
+  const totalDurationText = `Total Jam Kerja: ${totalHours} jam ${remainingMinutes} menit`;
 
   const documentDefinition = {
     pageSize: "A4",
@@ -46,7 +79,8 @@ export async function exportAttendancePDF(filteredData, userInfo) {
           { text: "Laporan Kehadiran", style: "title" },
           { text: `Nama: ${filteredData[0]?.userName || "-"}`, style: "sub" },
           { text: `Pos-el: ${filteredData[0]?.userEmail || "-"}`, style: "sub" },
-          { text: dateRangeText, style: "sub" }
+          { text: dateRangeText, style: "sub" },
+          { text: totalDurationText, style: "sub"}
         ]
       ],
       margin: [40, 20]
@@ -57,12 +91,11 @@ export async function exportAttendancePDF(filteredData, userInfo) {
       alignment: "center",
       margin: [0, 10]
     }),
-
     content: [
       {
         table: {
           headerRows: 1,
-          widths: ["*","*", "*"],
+          widths: ["*","*", "*", "*"],
           body: tableBody
         }
       }
