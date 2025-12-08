@@ -1,9 +1,11 @@
 // AccountEditDialog Component
 "use client";
-import { getAuth } from "firebase/auth";
+import { getAuth, updateProfile } from "firebase/auth";
 import { useState, useEffect } from "react";
 import useUserInfo from "@/hooks/useUserInfo";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -27,14 +29,17 @@ export default function AccountEditDialog({ isOpen, onClose, editData }) {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    password: "",
     role: "user",
   });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (editData) {
       setFormData({
         name: editData.name || "",
         email: editData.email || "",
+        password: "",
         role: editData.role || "user",
       });
     }
@@ -43,58 +48,63 @@ export default function AccountEditDialog({ isOpen, onClose, editData }) {
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
-  async function handleEmailUpdate() {
-    try {
-      const res = await fetch("/api/admin/update-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid: editData.id,
-          newEmail: formData.email,
-        }),
-      });
-
-      const text = await res.text(); // ambil sebagai text dulu
-      let data;
-
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = null;
-      }
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Unknown server error");
-      }
-
-      alert("Email updated successfully.");
-      onClose();
-    } catch (err) {
-      alert("Error: " + err.message);
-    }
-  }
 
   const handleSubmit = async () => {
     if (!editData) return;
+    setLoading(true);
 
     try {
-      // 🔹 1. Update Firebase AUTH (displayName only)
-      if (auth.currentUser.uid === editData.id) {
-        await updateProfile(auth.currentUser, {
-          displayName: formData.name,
-        });
-      }
-
-      // 🔹 2. Update Firebase Realtime Database
-      await updateAccount(editData.id, {
+      const updates = {
         name: formData.name,
         role: formData.role,
-      });
+      };
 
+      // Update email if changed
+      if (formData.email !== editData.email) {
+        const res = await fetch("/api/admin/update-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid: editData.id,
+            newEmail: formData.email,
+          }),
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || "Failed to update email");
+        }
+
+        updates.email = formData.email;
+      }
+
+      // Update password if provided
+      if (formData.password && formData.password.length >= 6) {
+        const res = await fetch("/api/admin/update-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uid: editData.id,
+            newPassword: formData.password,
+          }),
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || "Failed to update password");
+        }
+      }
+
+      // Update Realtime Database
+      await updateAccount(editData.id, updates);
+
+      toast.success("Account updated successfully!");
       onClose();
     } catch (err) {
       console.error("Update failed:", err);
-      alert("Failed to update account");
+      toast.error(err.message || "Failed to update account");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -107,25 +117,42 @@ export default function AccountEditDialog({ isOpen, onClose, editData }) {
 
         <div className="flex flex-col gap-4 mt-2">
           <div className="flex flex-col gap-2">
-            <label>Name</label>
-            <input
-              className="border rounded p-2"
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
               value={formData.name}
               onChange={(e) => handleChange("name", e.target.value)}
+              placeholder="Enter name"
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label>Email</label>
-            <input
-              className="border rounded p-2"
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
               value={formData.email}
               onChange={(e) => handleChange("email", e.target.value)}
+              placeholder="Enter email"
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <label>Role</label>
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => handleChange("password", e.target.value)}
+              placeholder="Leave empty to keep current password"
+            />
+            <span className="text-xs text-muted-foreground">
+              Minimum 6 characters. Leave empty if you don't want to change password.
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="role">Role</Label>
             <Select
               value={formData.role}
               onValueChange={(v) => handleChange("role", v)}
@@ -142,10 +169,12 @@ export default function AccountEditDialog({ isOpen, onClose, editData }) {
         </div>
 
         <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleEmailUpdate}>Save</Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? "Saving..." : "Save Changes"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -197,22 +197,24 @@ export default function AccountsTable() {
                       {userInfo?.role === "sadmin" && (
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              onClick={() => handleEditAccount(account)}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-
                             {!isSadminAccount && (
-                              <Button
-                                size="icon"
-                                variant="destructive"
-                                onClick={() => handleDeleteAccount(account)}
-                              >
-                                <Trash className="w-4 h-4" />
-                              </Button>
+                              <>
+                                <Button
+                                  size="icon"
+                                  variant="outline"
+                                  onClick={() => handleEditAccount(account)}
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+
+                                <Button
+                                  size="icon"
+                                  variant="destructive"
+                                  onClick={() => handleDeleteAccount(account)}
+                                >
+                                  <Trash className="w-4 h-4" />
+                                </Button>
+                              </>
                             )}
                           </div>
                         </TableCell>

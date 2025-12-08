@@ -70,11 +70,21 @@ export default function useUserInfo(currentUser) {
   const updateAccount = async (userId, updatedData) => {
     try {
       await update(ref(db, `/accounts/users/${userId}`), updatedData);
-      alert("Account updated successfully!");
     } catch (err) {
       console.error("Update error:", err);
-      alert("Failed to update account");
+      throw err;
     }
   };
-  return { allAccounts, userInfo, loadingUser, updateRole, updateAccount };
+
+  const deleteAccount = async (userId) => {
+    try {
+      const userRef = ref(db, `/accounts/users/${userId}`);
+      await set(userRef, null);
+    } catch (err) {
+      console.error("Delete error:", err);
+      throw err;
+    }
+  };
+
+  return { allAccounts, userInfo, loadingUser, updateRole, updateAccount, deleteAccount };
 }

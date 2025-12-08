@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MoreHorizontal, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -63,6 +64,7 @@ const truncateText = (text, maxLength = 20) => {
 };
 
 export default function GuestsTable() {
+  const router = useRouter();
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -89,6 +91,11 @@ export default function GuestsTable() {
       try {
         setLoading(true);
 
+        // Fetch accounts first to get latest user info
+        const accountsRef = ref(db, "accounts/users");
+        const accountsSnapshot = await get(accountsRef);
+        const accountsData = accountsSnapshot.val() || {};
+
         const attendanceRef = ref(db, "attendance");
         const snapshot = await get(attendanceRef);
 
@@ -104,16 +111,21 @@ export default function GuestsTable() {
         // Loop userId
         Object.keys(data).forEach((userId) => {
           const userRecords = data[userId];
+          
+          // Get latest user info from accounts
+          const userAccount = accountsData[userId];
+          const latestName = userAccount?.name || "-";
+          const latestEmail = userAccount?.email || "-";
 
-          // // Loop tanggal
+          // Loop tanggal
           Object.keys(userRecords).forEach((dateKey) => {
             const record = userRecords[dateKey];
 
             formatted.push({
               id: `${userId}-${dateKey}`,
               userId,
-              userName: record.name || "-",
-              userEmail: record.email || "-",
+              userName: latestName,
+              userEmail: latestEmail,
               date: dateKey,
               masuk: record.masuk || null,
               keluar: record.keluar || null,
@@ -203,17 +215,19 @@ export default function GuestsTable() {
         <CardHeader className="flex flex-row justify-between items-center">
           <div className="flex gap-2 items-center">
             <CardTitle>Attendance List</CardTitle>
-            {filterName && filteredGuests.length > 0 && (
+            {filteredGuests.length > 0 && (
               <Button
                 variant="outline"
-                onClick={() =>
-                  exportAttendancePDF(
+                onClick={() => {
+                  // Pass data via query params or session storage
+                  sessionStorage.setItem('exportData', JSON.stringify({
                     filteredGuests,
+                    filterName,
                     dateStart,
-                    dateEnd,
-                    formatTimestampWIB
-                  )
-                }
+                    dateEnd
+                  }));
+                  router.push('/dashboard/export-pdf');
+                }}
               >
                 Export PDF
               </Button>
