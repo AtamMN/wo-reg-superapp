@@ -88,7 +88,7 @@ export default function ExportPDFPage() {
         setExportData({ filteredGuests: formatted });
 
         // Extract unique users from filteredGuests, excluding test accounts
-        const excludedUsers = ['trial acc', 'test acc', 'user'];
+        const excludedUsers = ['trial acc', 'test aku', 'user'];
         const users = [...new Set(formatted
           .map(item => item.userName)
           .filter(name => !excludedUsers.includes(name.toLowerCase()))
@@ -187,6 +187,7 @@ export default function ExportPDFPage() {
   const getWeekOptions = () => {
     const options = [];
     const now = new Date();
+    const cutoffDate = new Date(2025, 10, 24); // 24 November 2025 (month is 0-indexed)
     
     for (let i = 0; i < 4; i++) {
       const weekStart = new Date(now);
@@ -195,6 +196,11 @@ export default function ExportPDFPage() {
       const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // If Sunday, go back 6 days
       weekStart.setDate(weekStart.getDate() + daysToMonday - (i * 7));
       weekStart.setHours(0, 0, 0, 0);
+      
+      // Skip if week starts before 24 November 2025
+      if (weekStart < cutoffDate) {
+        continue;
+      }
       
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6); // Sunday
@@ -218,15 +224,20 @@ export default function ExportPDFPage() {
   const getMonthOptions = () => {
     const options = [];
     const now = new Date();
+    const cutoffDate = new Date(2025, 10, 24); // 24 November 2025
     
     for (let i = 0; i < 6; i++) {
       const periodStart = new Date(now.getFullYear(), now.getMonth() - i, 24);
+      
+      // Skip if period starts before 24 November 2025
+      if (periodStart < cutoffDate) {
+        continue;
+      }
+      
       const periodEnd = new Date(periodStart);
       periodEnd.setDate(periodStart.getDate() + 29); // 30 days period
       
-      const label = i === 0 
-        ? 'Periode Ini' 
-        : `24 ${periodStart.toLocaleDateString('id-ID', { month: 'long' })} - ${periodEnd.getDate()} ${periodEnd.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
+      const label = `24 ${periodStart.toLocaleDateString('id-ID', { month: 'long' })} - ${periodEnd.getDate()} ${periodEnd.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
       
       options.push({
         value: i,
