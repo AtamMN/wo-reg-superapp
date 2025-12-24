@@ -75,8 +75,9 @@ export async function checkTodayAttendance(userId) {
  * @param {string} userName
  * @param {string} userEmail
  * @param {"masuk"|"keluar"} type
+ * @param {string} keterangan - Optional note/description
  */
-export async function saveAttendance(userId, userName, userEmail, type) {
+export async function saveAttendance(userId, userName, userEmail, type, keterangan = "") {
   try {
     const timestamp = getTimestampWIB();
     const today = getTodayDateWIB();
@@ -92,8 +93,14 @@ export async function saveAttendance(userId, userName, userEmail, type) {
     // Simpan jam masuk atau keluar
     if (type === "masuk") {
       updates[`${attendancePath}/masuk`] = timestamp;
+      if (keterangan) {
+        updates[`${attendancePath}/keteranganMasuk`] = keterangan;
+      }
     } else if (type === "keluar") {
       updates[`${attendancePath}/keluar`] = timestamp;
+      if (keterangan) {
+        updates[`${attendancePath}/keteranganKeluar`] = keterangan;
+      }
     }
 
     await update(ref(db), updates);

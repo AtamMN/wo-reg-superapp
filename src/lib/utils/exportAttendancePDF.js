@@ -31,14 +31,16 @@ export async function exportAttendancePDF(filteredData, userInfo) {
   }
 
   const tableBody = [
-    ["Tanggal","Masuk", "Keluar", "Durasi"]
+    ["Tanggal", "Masuk", "Ket. Masuk", "Keluar", "Ket. Keluar", "Durasi"]
   ];
 
   filteredData.forEach((item) => {
     tableBody.push([
       item.date,
       convertToWIB(item.masuk)+" WIB",
+      item.keteranganMasuk || "-",
       convertToWIB(item.keluar)+" WIB",
+      item.keteranganKeluar || "-",
       calculateDuration(item.masuk, item.keluar)
     ]);
   });
@@ -95,7 +97,7 @@ export async function exportAttendancePDF(filteredData, userInfo) {
       {
         table: {
           headerRows: 1,
-          widths: ["*","*", "*", "*"],
+          widths: ["auto", "auto", "*", "auto", "*", "auto"],
           body: tableBody
         }
       }

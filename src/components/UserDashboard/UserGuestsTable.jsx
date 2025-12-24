@@ -54,7 +54,16 @@ export default function GuestsTable() {
   const [error, setError] = useState(null);
 
   // Kolom table tanpa name dan email (karena sudah user sendiri)
-  const columns = ["date", "masuk", "keluar"];
+  const columns = ["date", "masuk", "keteranganMasuk", "keluar", "keteranganKeluar"];
+
+  // Label untuk header kolom
+  const columnLabels = {
+    date: "Tanggal",
+    masuk: "Masuk",
+    keteranganMasuk: "Ket. Masuk",
+    keluar: "Keluar",
+    keteranganKeluar: "Ket. Keluar",
+  };
 
   const [selectedGuest, setSelectedGuest] = useState(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -98,7 +107,9 @@ export default function GuestsTable() {
             userEmail: record.email || "-",
             date: dateKey,
             masuk: record.masuk || null,
+            keteranganMasuk: record.keteranganMasuk || null,
             keluar: record.keluar || null,
+            keteranganKeluar: record.keteranganKeluar || null,
           });
         });
 
@@ -130,7 +141,7 @@ export default function GuestsTable() {
       (!startDate || itemDate >= startDate) &&
       (!endDate || itemDate <= endDate);
 
-    return nameMatch && dateMatch;
+    return dateMatch;
   });
 
   const sortedGuests = [...filteredGuests].sort((a, b) => {
@@ -261,12 +272,12 @@ export default function GuestsTable() {
                   {columns.map((c) => (
                     <TableHead
                       key={c}
-                      className={`capitalize cursor-pointer ${
+                      className={`cursor-pointer ${
                         sortBy === c ? "text-blue-600 font-semibold" : ""
                       }`}
                       onClick={() => handleSortToggle(c)}
                     >
-                      {c}
+                      {columnLabels[c] || c}
                       {sortBy === c && (sortOrder === "asc" ? " ↑" : " ↓")}
                     </TableHead>
                   ))}
@@ -303,8 +314,20 @@ export default function GuestsTable() {
                       </TableCell>
 
                       <TableCell>
+                        {row.keteranganMasuk
+                          ? truncateText(row.keteranganMasuk, 25)
+                          : "-"}
+                      </TableCell>
+
+                      <TableCell>
                         {row.keluar
                           ? formatTimestampWIB(row.keluar) + " WIB"
+                          : "-"}
+                      </TableCell>
+
+                      <TableCell>
+                        {row.keteranganKeluar
+                          ? truncateText(row.keteranganKeluar, 25)
                           : "-"}
                       </TableCell>
 

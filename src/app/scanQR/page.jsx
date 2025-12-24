@@ -8,6 +8,17 @@ import {
   formatTimestampWIB,
 } from "@/lib/firebase/attendance";
 import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 export default function QRScannerPage() {
   const { currentUser, userRole, loading } = useAuth();
@@ -18,6 +29,9 @@ export default function QRScannerPage() {
   const [message, setMessage] = useState({ type: "", text: "" });
   const [processing, setProcessing] = useState(false);
   const [lastScanned, setLastScanned] = useState("");
+  const [showDinasLuarDialog, setShowDinasLuarDialog] = useState(false);
+  const [dinasLuarType, setDinasLuarType] = useState("masuk");
+  const [keterangan, setKeterangan] = useState("");
 
   // Redirect if not logged in
   useEffect(() => {
@@ -174,6 +188,115 @@ export default function QRScannerPage() {
     }
   };
 
+  const handleDinasLuarSubmit = async () => {
+    if (!keterangan.trim()) {
+      setMessage({
+        type: "error",
+        text: "Keterangan wajib diisi untuk presensi dinas luar!",
+      });
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      if (!currentUser || !userRole) {
+        setMessage({
+          type: "error",
+          text: "Anda harus login terlebih dahulu",
+        });
+        setShowDinasLuarDialog(false);
+        setProcessing(false);
+        return;
+      }
+
+      const checkResult = await checkTodayAttendance(currentUser.uid);
+      const userName =
+        userRole.roleData?.name || currentUser.displayName || currentUser.email;
+
+      // ===== PRESENSI MASUK DINAS LUAR =====
+      if (dinasLuarType === "masuk") {
+        if (checkResult.exists && checkResult.data?.masuk) {
+          const tf = formatTimestampWIB(checkResult.data.masuk);
+          setMessage({
+            type: "error",
+            text: `Anda sudah presensi masuk hari ini pada ${tf} WIB`,
+          });
+          setShowDinasLuarDialog(false);
+          setProcessing(false);
+          return;
+        }
+
+        const saveResult = await saveAttendance(
+          currentUser.uid,
+          userName,
+          currentUser.email,
+          "masuk",
+          `[Dinas Luar] ${keterangan}`
+        );
+
+        if (saveResult.success) {
+          const tf = formatTimestampWIB(saveResult.timestamp);
+          setMessage({
+            type: "success",
+            text: `✅ Presensi MASUK (Dinas Luar) berhasil pada ${tf} WIB`,
+          });
+        }
+      }
+
+      // ===== PRESENSI KELUAR DINAS LUAR =====
+      else if (dinasLuarType === "keluar") {
+        if (!checkResult.exists || !checkResult.data?.masuk) {
+          setMessage({
+            type: "error",
+            text: "Anda belum presensi masuk hari ini!",
+          });
+          setShowDinasLuarDialog(false);
+          setProcessing(false);
+          return;
+        }
+
+        if (checkResult.data?.keluar) {
+          const tf = formatTimestampWIB(checkResult.data.keluar);
+          setMessage({
+            type: "error",
+            text: `Anda sudah presensi keluar hari ini pada ${tf} WIB`,
+          });
+          setShowDinasLuarDialog(false);
+          setProcessing(false);
+          return;
+        }
+
+        const saveResult = await saveAttendance(
+          currentUser.uid,
+          userName,
+          currentUser.email,
+          "keluar",
+          `[Dinas Luar] ${keterangan}`
+        );
+
+        if (saveResult.success) {
+          const tf = formatTimestampWIB(saveResult.timestamp);
+          setMessage({
+            type: "success",
+            text: `✅ Presensi KELUAR (Dinas Luar) berhasil pada ${tf} WIB`,
+          });
+        }
+      }
+
+      setShowDinasLuarDialog(false);
+      setKeterangan("");
+      setDinasLuarType("masuk");
+    } catch (error) {
+      console.error("Error processing dinas luar attendance:", error);
+      setMessage({
+        type: "error",
+        text: "Terjadi kesalahan. Silakan coba lagi.",
+      });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -210,16 +333,29 @@ export default function QRScannerPage() {
       )}
 
       {!scanning ? (
-        <button
-          onClick={() => {
-            setScanning(true);
-            setMessage({ type: "", text: "" });
-          }}
-          disabled={processing}
-          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Mulai Scan Presensi
-        </button>
+        <div className="flex flex-col gap-3 items-center">
+          <button
+            onClick={() => {
+              setScanning(true);
+              setMessage({ type: "", text: "" });
+            }}
+            disabled={processing}
+            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Mulai Scan Presensi
+          </button>
+
+          <button
+            onClick={() => {
+              setShowDinasLuarDialog(true);
+              setMessage({ type: "", text: "" });
+            }}
+            disabled={processing}
+            className="bg-orange-600 hover:bg-orange-700 text-white py-2 px-6 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Presensi Dinas Luar
+          </button>
+        </div>
       ) : (
         <>
           <div className="mt-4">
@@ -260,6 +396,80 @@ export default function QRScannerPage() {
           </button>
         </>
       )}
+
+      {/* Dialog Presensi Dinas Luar */}
+      <Dialog open={showDinasLuarDialog} onOpenChange={setShowDinasLuarDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Presensi Dinas Luar</DialogTitle>
+            <DialogDescription>
+              Isi form berikut untuk presensi dinas luar tanpa scan QR.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Jenis Presensi</Label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="dinasLuarType"
+                    value="masuk"
+                    checked={dinasLuarType === "masuk"}
+                    onChange={(e) => setDinasLuarType(e.target.value)}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span>Masuk</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="dinasLuarType"
+                    value="keluar"
+                    checked={dinasLuarType === "keluar"}
+                    onChange={(e) => setDinasLuarType(e.target.value)}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span>Keluar</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="keterangan">Keterangan <span className="text-red-500">*</span></Label>
+              <Textarea
+                id="keterangan"
+                placeholder="Contoh: Dinas ke Kantor Cabang Jakarta..."
+                value={keterangan}
+                onChange={(e) => setKeterangan(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDinasLuarDialog(false);
+                setKeterangan("");
+                setDinasLuarType("masuk");
+              }}
+              disabled={processing}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleDinasLuarSubmit}
+              disabled={processing || !keterangan.trim()}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {processing ? "Memproses..." : "Submit Presensi"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
